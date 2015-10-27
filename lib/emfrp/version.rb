@@ -1,0 +1,3 @@
+module Emfrp
+  VERSION = "0.0.1"
+end
