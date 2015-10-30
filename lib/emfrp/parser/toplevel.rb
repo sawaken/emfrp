@@ -128,22 +128,22 @@ module Emfrp
       end
     end
 
-    parser :node_def_by_constructor do # -> NodeDef
+    parser :node_cons_def do # -> NodeDef
       seq(
         key("node").name(:tag),
         opt(many1(ws) > init_def).map{|x| x == [] ? nil : x[0]}.name(:init),
         many1(ws),
-        node_instance_name.err("node-def", "node name").name(:node_name),
+        node_instance_name.name(:node_name),
         many(ws),
-        str(":").err("node-def", "':'"),
+        str(":"),
         many(ws),
-        type.err("node-def", "type of return value").name(:type),
+        type.name(:type),
         many(ws),
-        str("=").err("node-def", "'='"),
+        str("="),
         many(ws),
-        (node_constructor < end_of_def).err("node-def", "node-constructor").name(:constructor)
+        (node_constructor < end_of_def).err("node-cons-def", "node-constructor").name(:constructor)
       ).map do |x|
-        NodeDef.new(x.to_h)
+        NodeConsDef.new(x.to_h)
       end
     end
 

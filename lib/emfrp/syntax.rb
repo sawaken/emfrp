@@ -15,6 +15,10 @@ module Emfrp
         raise "unexist key #{key}"
       end
     end
+
+    def ==(other)
+      self.merge(:tag => nil) == other.merge(:tag => nil)
+    end
   end
 
   Types = [
