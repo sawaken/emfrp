@@ -15,23 +15,19 @@ module Emfrp
         raise "unexist key #{key}"
       end
     end
-
-    def ==(other)
-      self.merge(:tag => nil) == other.merge(:tag => nil)
-    end
   end
 
   Types = [
-    :Symbol,
-    :InputDef, :OutputDef, :DataDef, :FuncDef, :MethodDef, :NodeDef, :TypeDef, :ImportTypeDef, :InfixDef,
+    :SSymbol,
+    :InputDef, :OutputDef, :InitializeDef, :DataDef, :FuncDef, :MethodDef, :NodeDef, :TypeDef, :CTypeDef, :InfixDef,
     :ParamDef, :Type, :TupleType, :TValue, :TValueParam, :NodeConst, :InitDef, :LazyDef, :CExp,
     :NodeParam, :NodeLast, :NodeConstLift, :NodeConstClockEvery, :NodeConstInputQueue,
-    :IfExp, :MapExp, :MatchExp, :Case, :Pattern,
+    :IfExp, :MapExp, :MatchExp, :Case,
     :AnyPattern, :ValuePattern, :TuplePattern, :IntPattern,
     :UnaryOperatorExp, :OperatorSeq, :BinaryOperatorExp,
     :MethodCall, :FuncCall, :BlockExp, :Assign, :ValueConst, :ArrayConst, :GFConst, :SkipExp, :VarRef,
     :LiteralTuple, :LiteralArray, :LiteralString,
-    :LiteralInt, :LiteralUInt, :LiteralChar, :LiteralUChar, :LiteralFloat, :LiteralDouble
+    :LiteralIntegral, :LiteralFloating
   ]
   Types.each do |t|
     const_set(t, Class.new(Syntax))

@@ -4,25 +4,36 @@ require 'emfrp/syntax'
 require 'emfrp/parser/toplevel'
 require 'emfrp/parser/expression'
 require 'emfrp/parser/misc'
+require 'emfrp/parser/operator'
 
 module Emfrp
   class Parser < ParserCombinator::StringParser
+    ParsingError = Class.new(RuntimeError)
+
+    def self.parse_all(inputs)
+      inputs.inject([]) do |acc, input|
+        acc + Parser.parse(input[:src], input[:filename])
+      end
+    end
+
     def self.parse(src_str, filename)
       case res = whole_src.parse_from_string(convert_case_group(src_str), filename)
       when Fail
         ln = res.status.rest[0].tag[:line_number]
         col = res.status.rest[0].tag[:column_number]
         line = src_str.each_line.to_a[ln - 1]
-        puts "#{filename}:#{ln}: Syntax error, in `#{res.status.message[:place]}`: required #{res.status.message[:required]}"
-        puts "#{line}"
-        puts "#{" " * (col - 1)}^ "
+        msg = ""
+        msg << "#{filename}:#{ln}: Syntax error, in `#{res.status.message[:place]}`: required #{res.status.message[:required]}"
+        msg << "#{line}"
+        msg << "#{" " * (col - 1)}^ "
+        raise ParsingError.new(msg)
       else
-        res
+        infix_rearrange(res.parsed)
       end
     end
 
     def self.convert_case_group(src_str)
-      raise "TAB Occurs!!!" if src_str.chars.include?("\t")
+      raise ParsingError.new("TAB is not allowed to use in sources.") if src_str.chars.include?("\t")
       lines = src_str.each_line.to_a.map(&:chomp)
       len = lines.length
       len.times do |ln|
@@ -45,12 +56,68 @@ module Emfrp
       lines.map{|l| l + "\n"}.join
     end
 
-    def self.infix_rearrage(s)
+    def self.infix_rearrange(top_elements)
+      priority_listl = [[], [], [], [], [], [], [], [], [], []]
+      priority_listr = [[], [], [], [], [], [], [], [], [], []]
+      priority_listn = [[], [], [], [], [], [], [], [], [], []]
+      top_elements.select{|s| s.is_a?(InfixDef)}.each do |id|
+        if id[:priority] == nil || ("0" <= id[:priority][:desc] && id[:priority][:desc] <= "9")
+          priority = id[:priority] == nil ? 9 : id[:priority][:desc].to_i
+          opp = sat{|i| i.is_a?(SSymbol) && i[:desc] == id[:op][:desc]}.map(&:item)
+          if id[:type][:desc] == "infix"
+            priority_listn[priority] << opp
+          elsif id[:type][:desc] == "infixl"
+            priority_listl[priority] << opp
+          elsif id[:type][:desc] == "infixr"
+            priority_listr[priority] << opp
+          else
+            raise "invalid infix type"
+          end
+        else
+          raise "invalid prirority"
+        end
+      end
+      priority_list = [{:op => sat{|i| i.is_a?(SSymbol)}.map(&:item), :dir => "left"}]
+      10.times do |i|
+        if priority_listl[i].length > 0
+          priority_list << {:op => priority_listl[i].inject(&:|), :dir => "left"}
+        end
+        if priority_listr[i].length > 0
+          priority_list << {:op => priority_listr[i].inject(&:|), :dir => "right"}
+        end
+        if priority_listn[i].length > 0
+          priority_list << {:op => priority_listn[i].inject(&:|), :dir => "left"}
+        end
+      end
+      return infix_convert(top_elements, OpParser.make_op_parser(priority_list))
+    end
 
+    def self.infix_convert(s, parser)
+      if s.is_a?(Syntax)
+        new_s = s.class.new(s.map{|k, v| [k, infix_convert(v, parser)]}.to_h)
+        if s.is_a?(OperatorSeq)
+          items = Items.new(new_s[:seq].map{|c| Item.new(c, nil)})
+          res = parser.parse(items)
+          if res.is_a?(Fail)
+            raise "operator parsing fail!!"
+          end
+          res.parsed
+        else
+          new_s
+        end
+      elsif s.is_a?(Array)
+        s.map{|c| infix_convert(c, parser)}
+      else
+        s
+      end
     end
 
     def err(place, required)
       self.onfail(:place => place, :required => required)
+    end
+
+    def to_nil
+      self.map{|x| x[0]}
     end
   end
 end

@@ -11,8 +11,8 @@ module Emfrp
     end
 
     parser :top_def do
-      input_def ^ output_def ^ data_def ^ func_def ^ method_def ^ node_def ^ node_def_by_constructor ^
-      type_def ^ import_type_def ^ infix_def
+      input_def ^ output_def ^ data_def ^ func_def ^ node_def ^
+      type_def ^ ctype_def ^ infix_def
     end
 
     parser :input_def do # -> InputDef
@@ -22,13 +22,12 @@ module Emfrp
         many1(ws),
         node_instance_name.err("input-def", "name of node").name(:name),
         many(ws),
-        str(":").err("input-def", "':' after node-name"),
+        str(":").err("input-def", "': [Type]'  after node-name"),
         many(ws),
         type.err("input-def", "type").name(:type),
         many(ws),
-        str("<-").err("input-def", "'<-'"),
-        many(ws),
-        (cfunc_name < end_of_def).err("input-def", "name of C's function").name(:cfun)
+        cfunc_def.err("input-def", "C's function-name after '<-'").name(:cfunc),
+        end_of_def.err("input-def", "valid end of input-def")
       ).map do |x|
         InputDef.new(x.to_h)
       end
@@ -43,9 +42,20 @@ module Emfrp
         many(ws),
         str("->").err("output-def", "'->'"),
         many(ws),
-        (cfunc_name < end_of_def).err("output-def", "name of C's function").name(:cfun)
+        (cfunc_name < end_of_def).err("output-def", "name of C's function").name(:cfunc)
       ).map do |x|
         OutputDef.new(x.to_h)
+      end
+    end
+
+    parser :initialize_def do # -> InitializeDef
+      seq(
+        key("initialize").name(:tag),
+        many(ws),
+        cfunc_def.name(:cfunc),
+        end_of_def
+      ).map do |x|
+        InitializeDef.new(x.to_h)
       end
     end
 
@@ -54,12 +64,15 @@ module Emfrp
         key("data").name(:tag),
         many1(ws),
         data_name.err("data-def", "name of data").name(:name),
+        opt_fail(
+          many(ws) >
+          str(":") >
+          many(ws) >
+          type.err("data-def", "type")
+        ).to_nil.name(:type),
         many(ws),
-        str(":").err("data-def", "':'"),
-        many(ws),
-        type.err("data-def", "type").name(:type),
-        many(ws),
-        (body_def < end_of_def).err("data-def", "body").name(:body)
+        (exp_def ^ cfunc_def).err("data-def", "body").name(:body),
+        end_of_def.err("data-def", "valid end of data-def")
       ).map do |x|
         DataDef.new(x.to_h)
       end
@@ -69,41 +82,21 @@ module Emfrp
       seq(
         key("func").name(:tag),
         many1(ws),
-        func_name.err("func-def", "name of func").name(:name),
+        (func_name | operator).err("func-def", "name of func").name(:name),
         many(ws),
         str("("),
-        many1_fail(func_param_def, comma_separator).err("func-def", "list of param for function"),
+        many1_fail(func_param_def, comma_separator).err("func-def", "list of param for function").name(:params),
         str(")"),
-        many(ws),
-        str(":").err("func-def", "':'"),
-        many(ws),
-        type.err("func-def", "type of return value").name(:type),
+        opt_fail(
+          many(ws) >
+          str(":") >
+          many(ws) >
+          type.err("func-def", "type of return value")
+        ).to_nil.name(:type),
         many(ws),
         (body_def < end_of_def).err("func-def", "body").name(:body)
       ).map do |x|
         FuncDef.new(x.to_h)
-      end
-    end
-
-    parser :method_def do # -> MethodDef
-      seq(
-        key("method").name(:tag),
-        many1(ws),
-        type_with_var.err("method-def", "type of receiver").name(:receiver_type),
-        str("#").err("method-def", "'#'"),
-        method_name.err("method-def", "method name").name(:method_name),
-        many(ws),
-        str("("),
-        many_fail(func_param_def, comma_separator).err("method-def", "list of param for method"),
-        str(")"),
-        many(ws),
-        str(":").err("method-def", "':'"),
-        many(ws),
-        type.err("method-def", "type of return value").name(:type),
-        many(ws),
-        (body_def < end_of_def).err("method-def", "body").name(:body)
-      ).map do |x|
-        MethodDef.new(x.to_h)
       end
     end
 
@@ -115,35 +108,17 @@ module Emfrp
         node_instance_name.err("node-def", "node name").name(:node_name),
         many(ws),
         str("("),
-        many1_fail(node_param, comma_separator).err("node-def", "list of param for node"),
+        many1_fail(node_param, comma_separator).err("node-def", "list of param for node").name(:params),
         str(")"),
         many(ws),
-        str(":").err("node-def", "':'"),
+        str(":").err("node-def", "': [Type]'"),
         many(ws),
         type.err("node-def", "type of return value").name(:type),
         many(ws),
-        (body_def < end_of_def).err("node-def", "body").name(:body)
+        exp_def.err("node-def", "body").name(:exp),
+        end_of_def.err("node-def", "valid end of node-def")
       ).map do |x|
         NodeDef.new(x.to_h)
-      end
-    end
-
-    parser :node_cons_def do # -> NodeDef
-      seq(
-        key("node").name(:tag),
-        opt(many1(ws) > init_def).map{|x| x == [] ? nil : x[0]}.name(:init),
-        many1(ws),
-        node_instance_name.name(:node_name),
-        many(ws),
-        str(":"),
-        many(ws),
-        type.name(:type),
-        many(ws),
-        str("="),
-        many(ws),
-        (node_constructor < end_of_def).err("node-cons-def", "node-constructor").name(:constructor)
-      ).map do |x|
-        NodeConsDef.new(x.to_h)
       end
     end
 
@@ -162,30 +137,29 @@ module Emfrp
       end
     end
 
-    parser :import_type_def do # -> ImportTypeDef
+    parser :ctype_def do # -> CTypeDef
       seq(
-        key("imptype").name(:tag),
+        key("ctype").name(:tag),
         many1(ws),
-        type_symbol.err("import-type-def", "type symbol to be define").name(:name),
+        type_symbol.err("ctype-def", "type symbol to be define").name(:name),
         many(ws),
-        str("<-").err("import-type-def", "'<-'"),
+        str("<-").err("ctype-def", "'<-'"),
         many(ws),
-        (cfunc_name < end_of_def).err("import-type-def", "type symbol from C").name(:ctype)
+        (cfunc_name < end_of_def).err("ctype-def", "type symbol from C").name(:ctype)
       ).map do |x|
-        ImportTypeDef.new(x.to_h)
+        CTypeDef.new(x.to_h)
       end
     end
 
     parser :infix_def do # -> InfixDef
       seq(
-        (str("infixl") | str("infixr") | str("infix")).map{|s| [s[0].tag, s.map(&:item).join.to_sym]}.name(:type),
+        (symbol("infixl") | symbol("infixr") | symbol("infix")).name(:type),
+        opt(many1(ws) > digit_symbol).to_nil.name(:priority),
         many1(ws),
-        digit.err("infix-def", "digit of priority").name(:priority),
-        many1(ws),
-        operator.err("infix-def", "operator").name(:op),
+        operator_general.err("infix-def", "operator").name(:op),
         end_of_def
       ). map do |x|
-        InfixDef.new(:tag => x[:type][0], :type => x[:type][1], :priority => x[:priority], :op => x[:op])
+        InfixDef.new(:tag => x[:type][:tag], :type => x[:type], :priority => x[:priority], :op => x[:op])
       end
     end
 
@@ -195,12 +169,14 @@ module Emfrp
     parser :func_param_def do # -> ParamDef
       seq(
         var_name.name(:var_name),
-        many(ws),
-        str(":").err("param-def", "':'"),
-        many(ws),
-        type_with_var.err("param-def", "type with type-var").name(:type)
+        opt_fail(
+          many(ws) >
+          str(":") >
+          many(ws) >
+          type_with_var.err("param-def", "type with type-var")
+        ).to_nil.name(:type)
       ).map do |x|
-        ParamDef.new(x.to_h, :tag => x[0][:tag])
+        ParamDef.new(x.to_h, :tag => x[:var_name][:tag])
       end
     end
 
@@ -208,14 +184,25 @@ module Emfrp
     # --------------------
 
     parser :cexp do
-      (many(ws) > many1(notchar("}"))).map{|cs| CExp.new(:desc => cs.map{|x| x.item}.join.strip, :tag =>cs[0].tag)}
+      (many(ws) > many1(notchar("}"))).map do |cs|
+        CExp.new(:desc => cs.map{|x| x.item}.join.strip, :tag =>cs[0].tag)
+      end
+    end
+
+    parser :exp_def do
+      str("=") > many(ws) > exp.err("body-def", "valid expression")
+    end
+
+    parser :cexp_def do
+      str("<-") > many(ws) > str("{") > cexp < str("}").err("body-def", "'}' after c-expression")
+    end
+
+    parser :cfunc_def do
+      str("<-") > many(ws) > cfunc_name
     end
 
     parser :body_def do
-      exp_def = str("=") > many(ws) > exp.err("body-def", "valid expression")
-      cexp_def = str("{") > cexp < str("}").err("body-def", "'}' after c-expression")
-      c_def = str("<-") > many(ws) > (cfunc_name | cexp_def).err("body-def", "c-function name or c-expression")
-      exp_def ^ c_def
+      exp_def ^ cexp_def ^ cfunc_def
     end
 
     # Node associated
@@ -238,7 +225,7 @@ module Emfrp
     parser :node_param do
       seq(
         node_name.name(:name),
-        opt_fail(str("as") > var_name.err("node-parameter", "name as exposed")).map{|x| x[0]}.name(:as)
+        opt_fail(str("as") > var_name.err("node-parameter", "name as exposed")).to_nil.name(:as)
       ).map do |xs|
         NodeParam.new(xs.to_h, :tag => xs[:name][:tag])
       end
@@ -262,28 +249,11 @@ module Emfrp
     end
 
     parser :node_constructor do
-      lift | clock_every | input_queue
+      input_queue
     end
 
     parser :node_name_last do
       (node_instance_name < str("@last")).map{|x| NodeLast.new(:name => x, :tag => x[:tag])}
-    end
-
-    parser :lift do
-      args = seq(
-        func_name.name(:func_name),
-        comma_separator,
-        many1_fail(node_name, comma_separator).err("2nd, 3rd, ... arguments for Lift", "node-names").name(:nodes)
-      ).err("argument for Lift", "[Function-name, Node-name1, Node-name2, ...] such as Lift[myfunc, n1, n2]")
-        .map{|x| x.to_h}
-      node_constructor_gen(NodeConstLift, "Lift", args)
-    end
-
-    parser :clock_every do
-      args = seq(
-        positive_integer.name(:clock),
-      ).err("argument for InputQueue", "[Interval] such as ClockEvery[10]").map{|x| x.to_h}
-      node_constructor_gen(NodeConstClockEvery, "ClockEvery", args)
     end
 
     parser :input_queue do
@@ -345,19 +315,21 @@ module Emfrp
     parser :tvalue_def do # -> TValue
       seq(
         tvalue_symbol.name(:name),
-        many(ws),
-        opt_fail(str("(") > many1_fail(tvalue_def_type, comma_separator) < str(")")
-          .err("value-constructor-def", "')'")).map{|x| x.flatten}.name(:params),
-        many(ws)
+        opt_fail(
+          many(ws) >
+          str("(") >
+          many1_fail(tvalue_def_type, comma_separator) <
+          str(")").err("value-constructor-def", "')'")
+        ).map{|x| x.flatten}.name(:params),
       ).map do |x|
         TValue.new(x.to_h, :tag => x[:name][:tag])
       end
     end
 
     parser :tvalue_def_type do # -> TValueParam
-      colon = (many(ws) < str(":") < many(ws)).err("value-constructor-parameter-def", "':' after name")
+      colon = (many(ws) < str(":") < many(ws))
       seq(
-        opt_fail(func_name < colon).map{|x| x == [] ? nil : x[0]}.name(:name),
+        opt_fail(func_name < colon).to_nil.name(:name),
         type_with_var.name(:type)
       ).map do |x|
         TValueParam.new(x.to_h, :tag => x[:name] ? x[:name][:tag] : x[:type][:tag])

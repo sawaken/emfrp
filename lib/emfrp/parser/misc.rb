@@ -25,7 +25,7 @@ module Emfrp
 
     parser :symbol do |s|
       str(s).map do |s|
-        Symbol.new(:desc => s.map(&:item).join, :tag => s[0].tag)
+        SSymbol.new(:desc => s.map(&:item).join, :tag => s[0].tag)
       end
     end
 
@@ -53,65 +53,85 @@ module Emfrp
       many(tabspace) > newline > many(ws)
     end
 
-    parser :ident_begin_lower do # -> Symbol
+    parser :ident_begin_lower do # -> SSymbol
       seq(lower_alpha, many(lower_alpha | upper_alpha | digit | char("_"))).map do |xs|
         items = [xs[0]] + xs[1]
-        Symbol.new(:desc => items.map{|i| i.item}.join, :tag => xs[0].tag)
+        SSymbol.new(:desc => items.map{|i| i.item}.join, :tag => xs[0].tag)
       end
     end
 
-    parser :ident_begin_upper do # -> Symbol
+    parser :ident_begin_upper do # -> SSymbol
       seq(upper_alpha, many(lower_alpha | upper_alpha | digit | char("_"))).map do |xs|
         items = [xs[0]] + xs[1]
-        Symbol.new(:desc => items.map{|i| i.item}.join, :tag => xs[0].tag)
+        SSymbol.new(:desc => items.map{|i| i.item}.join, :tag => xs[0].tag)
       end
     end
 
-    parser :positive_integer do # -> Symbol
+    parser :positive_integer do # -> SSymbol
       seq(pdigit, many(digit)).map do |x|
-        Symbol.new(:desc => ([x[0]] + x[1]).map{|i| i.item}.join.to_s, :tag => x[0].tag)
+        SSymbol.new(:desc => ([x[0]] + x[1]).map{|i| i.item}.join.to_s, :tag => x[0].tag)
       end
     end
 
-    parser :cfunc_name do # -> Symbol
+    parser :zero_integer do # -> SSymbol
+      symbol("0")
+    end
+
+    parser :negative_integer do # -> SSymbol
+      seq(symbol("-"), positive_integer).map do |x|
+        SSymbol.new(:desc => x[0][:desc] + x[1][:desc], :tag => x[0][:tag])
+      end
+    end
+
+    parser :digit_symbol do # -> SSymbol
+      digit.map{|c| SSymbol.new(:desc => c.item, :tag => c.tag)}
+    end
+
+    parser :cfunc_name do # -> SSymbol
       ident_begin_lower | ident_begin_upper
     end
 
-    parser :func_name do # -> Symbol
+    parser :func_name do # -> SSymbol
       ident_begin_lower
     end
 
-    parser :data_name do # -> Symbol
+    parser :data_name do # -> SSymbol
       ident_begin_lower
     end
 
-    parser :method_name do # -> Symbol
+    parser :method_name do # -> SSymbol
       operator | ident_begin_lower
     end
 
-    parser :var_name do # -> Symbol
+    parser :var_name do # -> SSymbol
       ident_begin_lower
     end
 
-    parser :node_instance_name do # -> Symbol
+    parser :node_instance_name do # -> SSymbol
       ident_begin_lower
     end
 
-    parser :var_name_allow_last do # -> Symbol
+    parser :var_name_allow_last do # -> SSymbol
       (ident_begin_lower < str("@last")).map{|s| s.update(:desc => s[:desc] + "@last")} | ident_begin_lower
     end
 
-    parser :operator do # -> Symbol
-      usable = "!#$%&*+./<=>?@\\^|-~".chars.map{|c| char(c)}.inject(&:|)
+    OPUsable = "!#$%&*+./<=>?@\\^|-~"
+
+    parser :operator do # -> SSymbol
+      usable = OPUsable.chars.map{|c| char(c)}.inject(&:|)
       ng = ["..", ":", "::", "=", "\\", "|", "<-", "->", "@", "~", "=>", "."]
       many1(usable) >> proc{|cs|
         token = cs.map{|i| i.item}.join
         if ng.include?(token)
           fail
         else
-          ok(Symbol.new(:desc => token, :tag => cs[0].tag))
+          ok(SSymbol.new(:desc => token, :tag => cs[0].tag))
         end
       }
+    end
+
+    parser :operator_general do # -> SSymbol
+      operator ^ (char("`") > func_name < char("`"))
     end
   end
 end

@@ -82,7 +82,7 @@ module Emfrp
     end
 
     parser :pattern do
-      dont_care_pattern ^ name_pattern ^ recursive_pattern ^ no_arg_pattern ^ tuple_pattern ^ int_pattern
+      dont_care_pattern ^ name_pattern ^ recursive_pattern ^ no_arg_pattern ^ tuple_pattern ^ integral_pattern
     end
 
     parser :dont_care_pattern do
@@ -137,16 +137,15 @@ module Emfrp
       end
     end
 
-    parser :int_pattern do
-      int_literal.map{|n| IntPattern.new(:val => n)}
+    parser :integral_pattern do
+      integral_literal.map{|n| IntPattern.new(:val => n)}
     end
 
     # Operator Expression
     # --------------------
 
     parser :operator_exp do
-      operator_app = operator ^ (char("`") > func_name < char("`"))
-      opexp = operator_app.map do |op|
+      opexp = operator_general.map do |op|
         proc do |l, r|
           if l.is_a?(OperatorSeq)
             OperatorSeq.new(:seq => l[:seq] + [op, r], :tag => l[:tag])
@@ -230,10 +229,6 @@ module Emfrp
       end
     end
 
-    parser :parenth_exp do
-      str("(") > many(ws) > exp < many(ws) < str(")")
-    end
-
     parser :value_cons do # -> ValueConst
       seq(
         tvalue_symbol.name(:tvalue_name),
@@ -294,7 +289,7 @@ module Emfrp
     # --------------------
 
     parser :literal_exp do
-      string_literal ^ char_literal ^ parenth_or_tuple_literal ^ array_literal ^ float_literal ^ int_literal ^ wrap_literal
+      string_literal ^ char_literal ^ parenth_or_tuple_literal ^ array_literal ^ floating_literal ^ integral_literal
     end
 
     parser :string_literal do
@@ -335,33 +330,17 @@ module Emfrp
       end
     end
 
-    parser :int_literal do
-      neg = seq(char("-"), positive_integer).map{|x| LiteralInt.new(:tag => x[0].tag, :entity => Symbol.new(:tag => x[0].tag, :desc => "-" + x[1][:desc]))}
-      int_literal_unsigned | neg
+    parser :integral_literal do
+      (positive_integer | zero_integer | negative_integer).map do |x|
+        LiteralIntegral.new(:tag => x[:tag], :entity => x)
+      end
     end
 
-    parser :int_literal_unsigned do
-      zero = char("0").map{|x| LiteralInt.new(:tag => x.tag, :entity => Symbol.new(:tag => x.tag, :desc => "0"))}
-      pos = positive_integer.map{|i| LiteralInt.new(:tag => i[:tag], :entity => i) }
-      zero | pos
-    end
-
-    parser :float_literal do
-      pos = seq(many1(digit).name(:a), char("."), many1(digit).name(:b))
-        .map{|x| LiteralFloat.new(:tag => x[:a][0].tag, :entity => Symbol.new(:desc => "#{x[:a]}.#{x[:b]}", :tag => x[:a][0].tag))}
-      neg = seq(char("-"), many1(digit).name(:a), char("."), many1(digit).name(:b))
-        .map{|x| LiteralFloat.new(:tag => x[:a][0].tag, :entity => Symbol.new(:desc => "-#{x[:a]}.#{x[:b]}", :tag => x[:a][0].tag))}
-      pos | neg
-    end
-
-    parser :wrap_literal do
-      wint = seq(str("Int("), int_literal < str(")")).map{|i| LiteralInt.new(i[1], :tag => i[0][0].tag)}
-      wuint = seq(str("UInt("), int_literal_unsigned < str(")")).map{|i| LiteralUInt.new(i[1], :tag => i[0][0].tag)}
-      wchar = seq(str("Char("), int_literal < str(")")).map{|i| LiteralChar.new(i[1], :tag => i[0][0].tag)}
-      wuchar = seq(str("UChar("), int_literal_unsigned < str(")")).map{|i| LiteralUChar.new(i[1], :tag => i[0][0].tag)}
-      wfloat = seq(str("Float("), float_literal < str(")")).map{|i| LiteralFloat.new(i[1], :tag => i[0][0].tag)}
-      wdouble = seq(str("Double("), float_literal < str(")")).map{|i| LiteralDouble.new(i[1], :tag => i[0][0].tag)}
-      wint | wuint | wchar | wuchar | wfloat | wdouble
+    parser :floating_literal do
+      seq(integral_literal, char("."), many1(digit)).map do |x|
+        sym = SSymbol.new(:tag => x[0][:tag], :desc => x[0][:entity][:desc] + "." + x[2].map(&:item).join)
+        LiteralFloating.new(:tag => sym[:tag], :entity => sym)
+      end
     end
   end
 end
