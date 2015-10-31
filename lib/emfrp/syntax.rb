@@ -19,7 +19,7 @@ module Emfrp
 
   Types = [
     :Symbol,
-    :InputDef, :OutputDef, :DataDef, :FuncDef, :MethodDef, :NodeDef, :TypeDef, :InfixDef,
+    :InputDef, :OutputDef, :DataDef, :FuncDef, :MethodDef, :NodeDef, :TypeDef, :ImportTypeDef, :InfixDef,
     :ParamDef, :Type, :TupleType, :TValue, :TValueParam, :NodeConst, :InitDef, :LazyDef, :CExp,
     :NodeParam, :NodeLast, :NodeConstLift, :NodeConstClockEvery, :NodeConstInputQueue,
     :IfExp, :MapExp, :MatchExp, :Case, :Pattern,

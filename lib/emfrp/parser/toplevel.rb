@@ -12,7 +12,7 @@ module Emfrp
 
     parser :top_def do
       input_def ^ output_def ^ data_def ^ func_def ^ method_def ^ node_def ^ node_def_by_constructor ^
-      type_def ^ infix_def
+      type_def ^ import_type_def ^ infix_def
     end
 
     parser :input_def do # -> InputDef
@@ -159,6 +159,20 @@ module Emfrp
         (many1_fail(tvalue_def, or_separator) < end_of_def).err("type-def", "value constructors").name(:tvalues)
       ).map do |x|
         TypeDef.new(x.to_h)
+      end
+    end
+
+    parser :import_type_def do # -> ImportTypeDef
+      seq(
+        key("imptype").name(:tag),
+        many1(ws),
+        type_symbol.err("import-type-def", "type symbol to be define").name(:name),
+        many(ws),
+        str("<-").err("import-type-def", "'<-'"),
+        many(ws),
+        (cfunc_name < end_of_def).err("import-type-def", "type symbol from C").name(:ctype)
+      ).map do |x|
+        ImportTypeDef.new(x.to_h)
       end
     end
 
