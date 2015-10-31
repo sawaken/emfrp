@@ -111,7 +111,7 @@ module Emfrp
 
     end
 
-    # InputQueue Type Check (should be static type)
+    # InputQueue Type Check (should be full-static (recursively static) type)
     # --------------------
 
     # Recursive Func-call Check (recursive call is not allowed)
@@ -126,10 +126,7 @@ module Emfrp
     # Comprehensive of TValue-Element-Name Check
     # --------------------
 
-    # Foreign Data's Type Check (foreign defined data's type annotation is required)
-    # --------------------
-
-    # Foreign Func's Type Check (foreign defined data's type annotation is required)
+    # Foreign Func's Type Check (foreign defined func's type annotation is required without TypeVar)
     # --------------------
 
     # Variable Bound Check and alpha-conversion
