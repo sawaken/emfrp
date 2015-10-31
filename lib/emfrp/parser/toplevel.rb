@@ -11,7 +11,7 @@ module Emfrp
     end
 
     parser :top_def do
-      input_def ^ output_def ^ data_def ^ func_def ^ node_def ^
+      input_def ^ output_def ^ initialize_def ^ data_def ^ func_def ^ node_def ^
       type_def ^ ctype_def ^ infix_def
     end
 
@@ -26,7 +26,7 @@ module Emfrp
         many(ws),
         type.err("input-def", "type").name(:type),
         many(ws),
-        cfunc_def.err("input-def", "C's function-name after '<-'").name(:cfunc),
+        cfunc_body_def.err("input-def", "C's function-name after '<-'").name(:cfunc),
         end_of_def.err("input-def", "valid end of input-def")
       ).map do |x|
         InputDef.new(x.to_h)
@@ -51,8 +51,9 @@ module Emfrp
     parser :initialize_def do # -> InitializeDef
       seq(
         key("initialize").name(:tag),
+        opt_fail(initialize_target_def).to_nil.name(:target),
         many(ws),
-        cfunc_def.name(:cfunc),
+        cfunc_body_def.name(:cfunc),
         end_of_def
       ).map do |x|
         InitializeDef.new(x.to_h)
@@ -71,7 +72,7 @@ module Emfrp
           type.err("data-def", "type")
         ).to_nil.name(:type),
         many(ws),
-        (exp_def ^ cfunc_def).err("data-def", "body").name(:body),
+        exp_body_def.err("data-def", "body").name(:exp),
         end_of_def.err("data-def", "valid end of data-def")
       ).map do |x|
         DataDef.new(x.to_h)
@@ -115,7 +116,7 @@ module Emfrp
         many(ws),
         type.err("node-def", "type of return value").name(:type),
         many(ws),
-        exp_def.err("node-def", "body").name(:exp),
+        exp_body_def.err("node-def", "body").name(:exp),
         end_of_def.err("node-def", "valid end of node-def")
       ).map do |x|
         NodeDef.new(x.to_h)
@@ -163,6 +164,22 @@ module Emfrp
       end
     end
 
+    # Initialize associated
+    # --------------------
+
+    parser :initialize_target_def do # -> InitializeTargetDef
+      seq(
+        many1(ws),
+        data_name.name(:name),
+        many(ws),
+        str(":").err("initialize-def", "':' after name"),
+        many(ws),
+        type.err("initialize-def", "type").name(:type)
+      ).map do |x|
+        InitializeTargetDef.new(x.to_h)
+      end
+    end
+
     # Func associated
     # --------------------
 
@@ -189,20 +206,20 @@ module Emfrp
       end
     end
 
-    parser :exp_def do
+    parser :exp_body_def do
       str("=") > many(ws) > exp.err("body-def", "valid expression")
     end
 
-    parser :cexp_def do
+    parser :cexp_body_def do
       str("<-") > many(ws) > str("{") > cexp < str("}").err("body-def", "'}' after c-expression")
     end
 
-    parser :cfunc_def do
+    parser :cfunc_body_def do
       str("<-") > many(ws) > cfunc_name
     end
 
     parser :body_def do
-      exp_def ^ cexp_def ^ cfunc_def
+      exp_body_def ^ cexp_body_def ^ cfunc_body_def
     end
 
     # Node associated
