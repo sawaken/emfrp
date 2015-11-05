@@ -21,8 +21,10 @@ module Emfrp
     :SSymbol,
     :InputDef, :OutputDef, :InitializeDef, :DataDef, :FuncDef, :MethodDef, :NodeDef, :TypeDef, :CTypeDef, :InfixDef,
     :InitializeTargetDef,
-    :ParamDef, :Type, :TupleType, :TValue, :TValueParam, :NodeConst, :InitDef, :LazyDef, :CExp,
+    :ParamDef, :Type, :TypeVar, :TValue, :TValueParam, :NodeConst, :InitDef, :LazyDef, :CExp,
     :NodeParam, :NodeLast, :NodeConstLift, :NodeConstClockEvery, :NodeConstInputQueue,
+
+    # Expression
     :IfExp, :MapExp, :MatchExp, :Case,
     :AnyPattern, :ValuePattern, :TuplePattern, :IntPattern,
     :UnaryOperatorExp, :OperatorSeq, :BinaryOperatorExp,

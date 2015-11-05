@@ -95,7 +95,8 @@ module Emfrp
           type.err("func-def", "type of return value")
         ).to_nil.name(:type),
         many(ws),
-        (body_def < end_of_def).err("func-def", "body").name(:body)
+        body_def.err("func-def", "body").name(:body),
+        end_of_def.err("func-def", "valid end of func-def")
       ).map do |x|
         FuncDef.new(x.to_h)
       end
@@ -128,7 +129,7 @@ module Emfrp
         key("type").name(:tag),
         opt(many1(ws) > str("static")).map{|x| x == [] ? false : true}.name(:static),
         many1(ws),
-        type_with_param.err("type-def", "type with param").name(:name),
+        type_with_param.err("type-def", "type with param").name(:type),
         many(ws),
         str("=").err("type-def", "'='"),
         many(ws),
@@ -185,7 +186,7 @@ module Emfrp
 
     parser :func_param_def do # -> ParamDef
       seq(
-        var_name.name(:var_name),
+        var_name.name(:name),
         opt_fail(
           many(ws) >
           str(":") >
@@ -193,7 +194,7 @@ module Emfrp
           type_with_var.err("param-def", "type with type-var")
         ).to_nil.name(:type)
       ).map do |x|
-        ParamDef.new(x.to_h, :tag => x[:var_name][:tag])
+        ParamDef.new(x.to_h, :tag => x[:name][:tag])
       end
     end
 
@@ -219,25 +220,11 @@ module Emfrp
     end
 
     parser :body_def do
-      exp_body_def ^ cexp_body_def ^ cfunc_body_def
+      cexp_body_def ^ cfunc_body_def ^ exp_body_def
     end
 
     # Node associated
     # --------------------
-
-    def self.node_constructor_gen(ast_type, name, args)
-      seq(
-        symbol(name).name(:name),
-        many(ws),
-        str("[").err("node-constructor", "[args]"),
-        many(ws),
-        args.err("arguments for #{name}", "valid arguments").name(:args),
-        many(ws),
-        str("]").err("node-constructor", "']' at end of args"),
-      ).map do |xs|
-        ast_type.new(xs.to_h, :tag => xs[:name][:tag])
-      end
-    end
 
     parser :node_param do
       seq(
@@ -270,27 +257,37 @@ module Emfrp
     end
 
     parser :node_name_last do
-      (node_instance_name < str("@last")).map{|x| NodeLast.new(:name => x, :tag => x[:tag])}
+      (node_instance_name < str("@last")).map do |x|
+        NodeLast.new(:name => x, :tag => x[:tag])
+      end
     end
 
     parser :input_queue do
-      args = seq(
+      seq(
+        key("InputQueue").name(:tag),
+        many(ws),
+        str("[").err("node-constructor", "[args]"),
+        many(ws),
         string_literal.name(:name),
         comma_separator,
         type.name(:type),
         comma_separator,
         positive_integer.name(:size),
-      ).err("argument for InputQueue",
-         "[String of queue-name, Type of queue entity, Size of queue] such as InputQueue[\"myqueue\", Int, 10]")
-         .map{|x| x.to_h}
-      node_constructor_gen(NodeConstInputQueue, "InputQueue", args)
+        many(ws),
+        str("]").err("node-constructor", "']' at end of args"),
+      ).map do |x|
+        NodeConstInputQueue.new(x.to_h)
+      end
     end
 
     # Type associated
     # --------------------
 
     def self.type_parser_gen(inner, type_size)
-      seq(type_symbol, opt_fail(str("<") > type_size.err("type", "type-size") < str(">"))) >> proc{|x|
+      seq(
+        type_symbol,
+        opt_fail(str("<") > type_size.err("type", "type-size") < str(">"))
+      ) >> proc{|x|
         type_args = many1_fail(inner, comma_separator).err("type", "list of type for '#{x[0]}'s type-argument")
         opt_fail(str("[") > type_args < str("]").err("type", "']'")).map do |args|
           Type.new(:tag => x[0][:tag], :name => x[0], :args => args.flatten, :size => x[1][0])
@@ -300,8 +297,12 @@ module Emfrp
 
     def self.type_tuple_parser_gen(inner)
       type_args = many1_fail(inner, comma_separator).err("type", "list of type for Tuple's type-argument")
-      seq(str("("), type_args < str(")").err("type", "')'")).map do |xs|
-        TupleType.new(:tag => xs[0][0].tag, :args => xs[1])
+      seq(
+        key("(").name(:tag),
+        type_args.name(:args),
+        str(")").err("type", "')'")
+      ).map do |x|
+        Type.new(x.to_h, :name => SSymbol.new(:tag => x[:tag], :desc => "Tuple"))
       end
     end
 
@@ -313,8 +314,10 @@ module Emfrp
       ident_begin_upper
     end
 
-    parser :type_var do
-      ident_begin_lower
+    parser :type_var do # => TypeVar
+      ident_begin_lower.map do |s|
+        TypeVar.new(:tag => s[:tag], :name => s)
+      end
     end
 
     parser :type do
@@ -322,7 +325,7 @@ module Emfrp
     end
 
     parser :type_with_var do
-      type_var | type_parser_gen(type_with_var, type_var | positive_integer) ^ type_tuple_parser_gen(type_with_var)
+      type_var ^ type_parser_gen(type_with_var, type_var | positive_integer) ^ type_tuple_parser_gen(type_with_var)
     end
 
     parser :type_with_param do

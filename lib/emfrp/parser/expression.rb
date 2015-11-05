@@ -172,7 +172,7 @@ module Emfrp
       seq(
         key(".").name(:tag),
         many(ws),
-        ident_begin_lower.err("method_call", "invalid method name").name(:method_name),
+        ident_begin_lower.err("method_call", "invalid method name").name(:name),
         opt_fail(many(ws) > str("(") > many(ws) > many_fail(exp, comma_separator) < many(ws) < str(")") < many(ws))
           .map{|x| x.flatten}.err("method_call", "invalid form of argument").name(:args)
       ).map do |x|
@@ -186,13 +186,13 @@ module Emfrp
 
     parser :single_op do
       seq(operator, many(ws), atom).map do |x|
-        UnaryOperatorExp.new(:tag => x[0][:tag], :op => x[0], :exp => x[2])
+        UnaryOperatorExp.new(:tag => x[0][:tag], :name => x[0], :exp => x[2])
       end
     end
 
     parser :func_call do
       seq(
-        func_name.name(:func_name),
+        func_name.name(:name),
         many(ws) > str("(") > many(ws),
         many1_fail(exp, comma_separator).name(:args),
         many(ws) > str(")")
@@ -231,9 +231,17 @@ module Emfrp
 
     parser :value_cons do # -> ValueConst
       seq(
-        tvalue_symbol.name(:tvalue_name),
-        opt_fail(many(ws) > str("(") > many(ws) > many_fail(exp, comma_separator) < many(ws) < str(")") < many(ws))
-          .map{|x| x.flatten}.err("value-construction", "invalid form of argument").name(:args)
+        tvalue_symbol.name(:name),
+        opt_fail(
+          seq(
+            many(ws),
+            str("("),
+            many(ws),
+            many_fail(exp, comma_separator).name(:args),
+            many(ws),
+            str(")")
+          ).map{|x| x[:args]}
+        ).map(&:flatten).err("value-construction", "invalid form of argument").name(:args)
       ).map do |x|
         ValueConst.new(x.to_h, :tag => x[0][:tag])
       end

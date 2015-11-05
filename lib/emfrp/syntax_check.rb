@@ -20,7 +20,8 @@ module Emfrp
         end
         proc.call(a)
       elsif a.is_a?(Array)
-        a.map{|c| for_all(c, &proc)}      end
+        a.map{|c| for_all(c, &proc)}
+      end
     end
 
     def for_all_type(a, *type, &proc)
@@ -130,6 +131,15 @@ module Emfrp
     # --------------------
 
     # Variable Bound Check and alpha-conversion
+    # --------------------
+
+    # Node Dependency Check (including circular check)
+    # --------------------
+
+    # Init for @last Node Check (Node refferred with @last should have init-exp)
+    # --------------------
+
+    # Variable Solution Check in Node, Func, Data
     # --------------------
 
     def self.count

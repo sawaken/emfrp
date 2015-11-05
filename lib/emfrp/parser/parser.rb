@@ -23,9 +23,10 @@ module Emfrp
         col = res.status.rest[0].tag[:column_number]
         line = src_str.each_line.to_a[ln - 1]
         msg = ""
-        msg << "#{filename}:#{ln}: Syntax error, in `#{res.status.message[:place]}`: required #{res.status.message[:required]}"
+        msg << "#{filename}:#{ln}: Syntax error, in `#{res.status.message[:place]}`: "
+        msg << "required #{res.status.message[:required]}\n"
         msg << "#{line}"
-        msg << "#{" " * (col - 1)}^ "
+        msg << "#{" " * (col - 1)}^ \n"
         raise ParsingError.new(msg)
       else
         infix_rearrange(res.parsed)
