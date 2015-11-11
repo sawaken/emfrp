@@ -25,7 +25,11 @@ module Emfrp
 
     parser :symbol do |s|
       str(s).map do |s|
-        SSymbol.new(:desc => s.map(&:item).join, :tag => s[0].tag)
+        SSymbol.new(
+          :desc => s.map(&:item).join,
+          :start_pos => s[0].tag,
+          :end_pos => s[-1].tag
+        )
       end
     end
 
@@ -54,22 +58,44 @@ module Emfrp
     end
 
     parser :ident_begin_lower do # -> SSymbol
-      seq(lower_alpha, many(lower_alpha | upper_alpha | digit | char("_"))).map do |xs|
-        items = [xs[0]] + xs[1]
-        SSymbol.new(:desc => items.map{|i| i.item}.join, :tag => xs[0].tag)
+      seq(
+        lower_alpha.name(:head),
+        many(lower_alpha | upper_alpha | digit | char("_")).name(:tail)
+      ).map do |x|
+        items = [x[:head]] + x[:tail]
+        SSymbol.new(
+          :desc => items.map{|i| i.item}.join,
+          :start_pos => items[0].tag,
+          :end_pos => items[-1].tag
+        )
       end
     end
 
     parser :ident_begin_upper do # -> SSymbol
-      seq(upper_alpha, many(lower_alpha | upper_alpha | digit | char("_"))).map do |xs|
-        items = [xs[0]] + xs[1]
-        SSymbol.new(:desc => items.map{|i| i.item}.join, :tag => xs[0].tag)
+      seq(
+        upper_alpha.name(:head),
+        many(lower_alpha | upper_alpha | digit | char("_")).name(:tail)
+      ).map do |x|
+        items = [x[:head]] + x[:tail]
+        SSymbol.new(
+          :desc => items.map{|i| i.item}.join,
+          :start_pos => items[0].tag,
+          :end_pos => items[-1].tag
+        )
       end
     end
 
     parser :positive_integer do # -> SSymbol
-      seq(pdigit, many(digit)).map do |x|
-        SSymbol.new(:desc => ([x[0]] + x[1]).map{|i| i.item}.join.to_s, :tag => x[0].tag)
+      seq(
+        pdigit.name(:head),
+        many(digit).name(:tail)
+      ).map do |x|
+        items = [x[:head]] + x[:tail]
+        SSymbol.new(
+          :desc => items.map{|i| i.item}.join,
+          :start_pos => items[0].tag,
+          :end_pos => items[-1].tag
+        )
       end
     end
 
@@ -77,14 +103,8 @@ module Emfrp
       symbol("0")
     end
 
-    parser :negative_integer do # -> SSymbol
-      seq(symbol("-"), positive_integer).map do |x|
-        SSymbol.new(:desc => x[0][:desc] + x[1][:desc], :tag => x[0][:tag])
-      end
-    end
-
     parser :digit_symbol do # -> SSymbol
-      digit.map{|c| SSymbol.new(:desc => c.item, :tag => c.tag)}
+      ("0".."9").map{|c| symbol(c)}.inject(&:|)
     end
 
     parser :cfunc_name do # -> SSymbol
@@ -112,7 +132,16 @@ module Emfrp
     end
 
     parser :var_name_allow_last do # -> SSymbol
-      (ident_begin_lower < str("@last")).map{|s| s.update(:desc => s[:desc] + "@last")} | ident_begin_lower
+      var_with_last | ident_begin_lower
+    end
+
+    parser :var_with_last do # -> SSymbol
+      seq(
+        ident_begin_lower.name(:prefix),
+        symbol("@last").name(:suffix)
+      ).map do |x|
+        SSymbol.new(x.to_h, :desc => x[:prefix][:desc] + x[:suffix][:desc])
+      end
     end
 
     OPUsable = "!#$%&*+./<=>?@\\^|-~"
@@ -120,12 +149,16 @@ module Emfrp
     parser :operator do # -> SSymbol
       usable = OPUsable.chars.map{|c| char(c)}.inject(&:|)
       ng = ["..", ":", "::", "=", "\\", "|", "<-", "->", "@", "~", "=>", "."]
-      many1(usable) >> proc{|cs|
-        token = cs.map{|i| i.item}.join
+      many1(usable) >> proc{|items|
+        token = items.map{|i| i.item}.join
         if ng.include?(token)
           fail
         else
-          ok(SSymbol.new(:desc => token, :tag => cs[0].tag))
+          ok(SSymbol.new(
+            :desc => token,
+            :start_pos => items[0].tag,
+            :end_pos => items[-1].tag
+          ))
         end
       }
     end

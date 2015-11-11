@@ -7,14 +7,14 @@ module Emfrp
         op = sat{|i| i.item.is_a?(SSymbol) && i.item[:desc] == x[:sym]}
         if x[:dir] == "left"
           opp = x[:op].map do |op|
-            proc{|l, r| BinaryOperatorExp.new(:tag => l[:tag], :name => op, :left => l, :right => r)}
+            proc{|l, r| FuncCall.new(:name => op, :args => [l, r])}
           end
           binopl_fail(contp, opp)
         elsif x[:dir] == "right"
           sp = contp >> proc{|l|
             x[:op] >> proc{|op|
               sp >> proc{|r|
-                ok(BinaryOperatorExp.new(:tag => l[:tag], :name => op, :left => l, :right => r))
+                ok(FuncCall.new(:name => op, :args => [l, r]))
               }}} | contp
         else
           raise "invalid direction"

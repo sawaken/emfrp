@@ -1,7 +1,7 @@
 module Emfrp
   module CCodeGen
 
-    def self.func_gen(toplevel)
+    def self.func_gen(top)
 
     end
 

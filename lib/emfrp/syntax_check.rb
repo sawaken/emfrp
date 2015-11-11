@@ -79,22 +79,6 @@ module Emfrp
       end
     end
 
-    # including TValue-Element-Name
-    def same_name_of_func(a)
-      same_name(all_type(a, FuncDef).map{|x| x[:name]})
-    end
-
-    def same_name_of_func_param(a)
-
-    end
-
-    def same_name_of_node(a)
-
-    end
-
-    def same_name_of_node_param(a)
-
-    end
 
     def same_name_of_type(a)
 
@@ -112,35 +96,8 @@ module Emfrp
 
     end
 
-    # InputQueue Type Check (should be full-static (recursively static) type)
-    # --------------------
 
-    # Recursive Func-call Check (recursive call is not allowed)
-    # --------------------
 
-    # Recursive Type Check (recursive data-structure is not allowed)
-    # --------------------
-
-    # TypeVar in Tvalue Bound Check
-    # --------------------
-
-    # Comprehensive of TValue-Element-Name Check
-    # --------------------
-
-    # Foreign Func's Type Check (foreign defined func's type annotation is required without TypeVar)
-    # --------------------
-
-    # Variable Bound Check and alpha-conversion
-    # --------------------
-
-    # Node Dependency Check (including circular check)
-    # --------------------
-
-    # Init for @last Node Check (Node refferred with @last should have init-exp)
-    # --------------------
-
-    # Variable Solution Check in Node, Func, Data
-    # --------------------
 
     def self.count
       @count ||= 0

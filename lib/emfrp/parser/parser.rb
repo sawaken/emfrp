@@ -19,8 +19,13 @@ module Emfrp
     def self.parse(src_str, filename)
       case res = whole_src.parse_from_string(convert_case_group(src_str), filename)
       when Fail
-        ln = res.status.rest[0].tag[:line_number]
-        col = res.status.rest[0].tag[:column_number]
+        if res.status.rest[0]
+          ln = res.status.rest[0].tag[:line_number]
+          col = res.status.rest[0].tag[:column_number]
+        else
+          ln = src_str.each_line.count
+          col = src_str.each_line.to_a.last.size
+        end
         line = src_str.each_line.to_a[ln - 1]
         msg = ""
         msg << "#{filename}:#{ln}: Syntax error, in `#{res.status.message[:place]}`: "
@@ -57,11 +62,17 @@ module Emfrp
       lines.map{|l| l + "\n"}.join
     end
 
-    def self.infix_rearrange(top_elements)
+    def self.infix_rearrange(top)
       priority_listl = [[], [], [], [], [], [], [], [], [], []]
       priority_listr = [[], [], [], [], [], [], [], [], [], []]
       priority_listn = [[], [], [], [], [], [], [], [], [], []]
-      top_elements.select{|s| s.is_a?(InfixDef)}.each do |id|
+      defined_op = {}
+      top[:infixes].reverse.each do |id|
+        if defined_op[id[:op][:desc]]
+          next
+        else
+          defined_op[id[:op][:desc]] = true
+        end
         if id[:priority] == nil || ("0" <= id[:priority][:desc] && id[:priority][:desc] <= "9")
           priority = id[:priority] == nil ? 9 : id[:priority][:desc].to_i
           opp = sat{|i| i.is_a?(SSymbol) && i[:desc] == id[:op][:desc]}.map(&:item)
@@ -90,7 +101,7 @@ module Emfrp
           priority_list << {:op => priority_listn[i].inject(&:|), :dir => "left"}
         end
       end
-      return infix_convert(top_elements, OpParser.make_op_parser(priority_list))
+      return infix_convert(top, OpParser.make_op_parser(priority_list))
     end
 
     def self.infix_convert(s, parser)

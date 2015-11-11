@@ -1,7 +1,12 @@
 module Emfrp
   module Typing
     class UnionType
-      UnifyError = Class.new(RuntimeError)
+      class UnifyError < RuntimeError
+        attr_reader :a, :b
+        def initialize(a, b)
+          @a, @b = a, b
+        end
+      end
       NameCounter = (0..100).to_a
       attr_reader :typename, :typeargs, :union
       attr_accessor :name_id
@@ -9,8 +14,17 @@ module Emfrp
       def self.from_type(type, tbl={})
         case type
         when Emfrp::Type
-          new(type[:name][:desc], type[:args].map{|a| from_type(a, tbl)})
-        when Emfrp::TypeVar
+          case type[:size]
+          when nil
+            new(type[:name][:desc], type[:args].map{|a| from_type(a, tbl)})
+          when SSymbol
+            type_size = new(type[:size][:desc].to_i, [])
+            new(type[:name][:desc], [type_size] + args.map{|a| from_type(a, tbl)})
+          when TypeVar
+            args = [type[:size]] + type[:args]
+            new(type[:name][:desc], args.map{|a| from_type(a, tbl)})
+          end
+        when TypeVar
           name = type[:name][:desc]
           if tbl[name]
             tbl[name]
@@ -19,6 +33,8 @@ module Emfrp
             tbl[name] = a
             a
           end
+        when UnionType
+          type
         end
       end
 
@@ -26,14 +42,27 @@ module Emfrp
         if args.length == 2
           @typename = args[0]
           @typeargs = args[1]
-        else
+        elsif args.length == 0
           @union = [self]
           @name_id = NameCounter.shift
+        else
+          raise "Wrong number of arguments (#{args.length} for 0, 2)"
         end
       end
 
       def var?
         @union
+      end
+
+      def include?(other)
+        unless other.var?
+          raise "argument error for UnionType#include?"
+        end
+        if self.var?
+          self.name_id == other.name_id
+        else
+          self.typeargs.any?{|t| t.include?(other)}
+        end
       end
 
       def unite(other)
@@ -75,7 +104,7 @@ module Emfrp
           if self.typename == other.typename && self.typeargs.size == other.typeargs.size
             self.typeargs.zip(other.typeargs).each{|t1, t2| t1.unify(t2)}
           else
-            raise UnifyError.new
+            raise UnifyError.new(nil, nil)
           end
         elsif !self.var? && other.var?
           other.union.each do |t|
@@ -91,6 +120,8 @@ module Emfrp
           self.unite(other)
           other.unite(self)
         end
+      rescue UnifyError => err
+        raise UnifyError.new(self, other)
       end
 
       def occur_check(var)
@@ -98,7 +129,7 @@ module Emfrp
           self.typeargs.each{|t| t.occur_check(var)}
         end
         if self == var
-          raise UnifyError.new
+          raise UnifyError.new(nil, nil)
         end
       end
 
