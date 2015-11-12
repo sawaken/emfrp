@@ -7,9 +7,9 @@ module Emfrp
           @a, @b = a, b
         end
       end
-      NameCounter = (0..100).to_a
+      NameCounter = (0..10000).to_a
       attr_reader :typename, :typeargs, :union
-      attr_accessor :name_id
+      attr_accessor :name_id, :original_typevar_name
 
       def self.from_type(type, tbl={})
         case type
@@ -31,10 +31,13 @@ module Emfrp
           else
             a = new()
             tbl[name] = a
+            a.original_typevar_name = name
             a
           end
         when UnionType
           type
+        else
+          raise "error"
         end
       end
 
@@ -133,9 +136,20 @@ module Emfrp
         end
       end
 
+      def to_uniq_str
+        if self.var?
+          raise "argument error"
+        end
+        if self.typeargs.size == 0
+          self.typename.to_s
+        else
+          self.typename.to_s + self.typeargs.map{|x| "_" + x.to_uniq_str + "_"}.join
+        end
+      end
+
       def inspect
         if self.var?
-          "a#{self.name_id}"
+          "a#{self.name_id}" + (@original_typevar_name ? "(#{@original_typevar_name})" : "")
         else
           "#{self.typename}[#{self.typeargs.map{|t| t.inspect}.join(", ")}]"
         end

@@ -15,7 +15,7 @@ module Emfrp
         associate_var(syntax.values, syntax[:datas])
       when NodeDef
         check_duplicate_name(syntax[:params].map{|x| x[:name]})
-        vars = syntax[:params].map{|x| x[:as] || x[:name]}
+        vars = syntax[:params].map{|x| x[:as]}
         check_duplicate_name(vars)
         syntax[:binds] = vars
         associate_var(syntax.values, [syntax] + binders)

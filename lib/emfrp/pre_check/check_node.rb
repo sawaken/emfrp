@@ -2,8 +2,8 @@ module Emfrp
   module PreCheck
     def check_node(top)
       top[:nodes].each do |n|
-        n[:params].map{|x| x[:name]}.each do |node_ref|
-          if node_ref[:last]
+        n[:params].each do |node_ref|
+          if node_ref.is_a?(NodeRef) && node_ref[:last]
             depended_node = (top[:nodes] + top[:inputs]).select{|x| x[:name] == node_ref[:name]}.first
             cond = case depended_node
             when InputDef
@@ -22,11 +22,11 @@ module Emfrp
     end
 
     def circular_check(nodes, node)
-      if n[:mark] != false
-        err("Circular definition of node", n[:mark])
+      if node[:mark] != false
+        err("Circular definition of node", node[:mark])
       end
       node[:mark] = true
-      n[:params].each do |x|
+      node[:params].each do |x|
         if x.is_a?(SSymbol)
           depended_nodes = nodes.select{|y| y[:name] == x[:name]}.first
           circular_check(nodes, depended_nodes)

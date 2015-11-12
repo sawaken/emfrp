@@ -60,7 +60,7 @@ module Emfrp
         symbol("output").name(:keyword),
         many1(ws),
         opt(str("*")).map{|x| x != []}.name(:asta_flag),
-        node_name.err("output-def", "name of node or node constructor").name(:node),
+        node_ref.err("output-def", "name of node or node constructor").name(:node),
         many(ws),
         str("->").err("output-def", "'->'"),
         many(ws),
@@ -134,10 +134,9 @@ module Emfrp
         str("("),
         many_fail(node_param, comma_separator).err("node-def", "list of param for node").name(:params),
         str(")"),
-        many(ws),
-        str(":").err("node-def", "': [Type]'"),
-        many(ws),
-        opt(type).to_nil.name(:type),
+        opt_fail(
+          many(ws) > str(":") > many(ws) > type.err("node-def", "[Type] after :")
+        ).to_nil.name(:type),
         many(ws),
         exp_body_def.err("node-def", "body").name(:exp),
         end_of_def.err("node-def", "valid end of node-def")
@@ -270,12 +269,11 @@ module Emfrp
     # --------------------
 
     parser :node_param do
-      seq(
-        node_name.name(:name),
-        opt_fail(str("as") > var_name.err("node-parameter", "name as exposed")).to_nil.name(:as)
-      ).map do |x|
-        NodeParam.new(x.to_h)
-      end
+      node_ref | node_constructor
+    end
+
+    parser :node_ref do
+      node_name_last | node_name_current
     end
 
     parser :decolator_def do
@@ -289,7 +287,6 @@ module Emfrp
     end
 
     parser :init_def do # -> InitDef
-      bra =
       seq(
         symbol("init").name(:keyword1),
         many(ws),
@@ -303,10 +300,6 @@ module Emfrp
       end
     end
 
-    parser :node_name do
-      node_name_last | node_name_current | node_constructor
-    end
-
     parser :node_constructor do
       input_queue
     end
@@ -314,15 +307,24 @@ module Emfrp
     parser :node_name_last do
       seq(
         node_instance_name.name(:name),
-        symbol("@last").name(:keyword)
+        symbol("@last").name(:keyword),
+        opt_fail(str("as") > var_name.err("node-parameter", "name as exposed")).to_nil.name(:as)
       ).map do |x|
-        NodeRef.new(x.to_h, :last => true)
+        as = x[:as] || SSymbol.new(
+          :desc => x[:name][:desc] + "@last",
+          :start_pos => x[:name][:start_pos],
+          :end_pos => x[:keyword][:end_pos]
+        )
+        NodeRef.new(:last => true, :as => as, :name => x[:name])
       end
     end
 
     parser :node_name_current do
-      node_instance_name.map do |x|
-        NodeRef.new(:last => false, :name => x)
+      seq(
+        node_instance_name.name(:name),
+        opt_fail(str("as") > var_name.err("node-parameter", "name as exposed")).to_nil.name(:as)
+      ).map do |x|
+        NodeRef.new(:last => false, :as => x[:as] || x[:name], :name => x[:name])
       end
     end
 

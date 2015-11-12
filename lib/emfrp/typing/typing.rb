@@ -5,14 +5,24 @@ module Emfrp
     extend self
     TypingError = Class.new(RuntimeError)
 
+    class Tbl < Hash
+      def [](key)
+        if self.has_key?(key)
+          self.fetch(key)
+        else
+          raise "#{key} is unbound"
+        end
+      end
+    end
+
     def err(message, *factors)
       raise TypingError.new(:message => message, :factors => factors)
     end
 
     def typing(top)
-      ftype_tbl = {}
-      vtype_tbl = {}
-      ntype_tbl = {}
+      ftype_tbl = Tbl.new
+      vtype_tbl = Tbl.new
+      ntype_tbl = Tbl.new
       typing_tvalues(ftype_tbl, top[:types])
       typing_funcs_and_datas(ftype_tbl, vtype_tbl, top[:funcs], top[:datas])
       typing_inputs(ntype_tbl, top[:inputs])
@@ -41,11 +51,11 @@ module Emfrp
           case d
           when DataDef
             alpha_var = [d[:name], Link.new(d)]
-            unless vtype_tbl[alpha_var]
+            unless vtype_tbl.has_key?(alpha_var)
               typing_data(ftype_tbl, vtype_tbl, d)
             end
           when FuncDef
-            unless ftype_tbl[d[:name]]
+            unless ftype_tbl.has_key?(d[:name])
               typing_func(ftype_tbl, vtype_tbl, d)
             end
           end
@@ -111,19 +121,17 @@ module Emfrp
 
     def typing_nodes(ftype_tbl, vtype_tbl, ntype_tbl, node_defs)
       node_defs.each do |n|
-        ntype_tbl[n[:name]] ||= UnionType.new
+        if !ntype_tbl.has_key?(n[:name])
+          ntype_tbl[n[:name]] = UnionType.new
+        end
         n[:typing] = ntype_tbl[n[:name]]
       end
       node_defs.each do |n|
-        param_vtype_tbl = n[:args].map{|node_ref|
-          if node_ref[:last]
-            var_name = SSymbol.new(:desc => node_ref[:name][:desc] + "@last")
-          else
-            var_name = node_ref[:name]
-          end
-          alpha_var = [var_name, Link.new(n)]
-          [alpha_var, ntype_tbl[node_ref[:name]]]
+        param_vtype_tbl = n[:params].map{|x|
+          alpha_var = [x[:as], Link.new(n)]
+          [alpha_var, ntype_tbl[x[:name]]]
         }.to_h
+        vtype_tbl.merge!(param_vtype_tbl)
         n[:typing].unify(typing_exp(ftype_tbl, vtype_tbl, n[:exp]))
         # Unify with Type Annotation
         if n[:type]

@@ -45,7 +45,11 @@ module Emfrp
     end
 
     def inspect
-      @link ? "Link" : "NullLink"
+      if @link.has_key?(:name)
+        "Link(#{@link[:name][:desc]})"
+      else
+        "Link(#{@link.class})"
+      end
     end
 
     def to_s
