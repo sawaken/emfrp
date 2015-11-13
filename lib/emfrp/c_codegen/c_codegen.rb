@@ -4,10 +4,11 @@ module Emfrp
   module CCodeGen
     def initialize
       @codes = []
+      @templates = []
     end
 
     def gen(top)
-      @types = top[:types]
+      type_gen(top)
 
     end
 
@@ -16,62 +17,84 @@ module Emfrp
     end
 
     def node_gen(node_def)
-      func_name = "Node_" + node_def[:name][:desc]
-      param_types = node_def[:typing].typeargs.clone
-      return_type = param_types.pop
-      params = node_def[:params].map{|x| x[:as] || x[:name]}.zip(param_types).map do |n, t|
-        type_gen(t) + " " + name2cname(n[:desc])
-      end
-      @codes << CElement::Func.new(func_name, params, type_gen(return_type), body_exp_gen(node_def[:exp]))
+      name = "Node_" + node_def[:name][:desc]
+      param_name_list = node_def[:params].map{|x| name2cname(x[:as][:desc])}
+      param_type_list = node_def[:typing].typeargs.map{|t| type2cname(t)}
+      type = param_type_list.pop
+      body = body_exp_gen(node_def[:exp])
+      @codes << CElement::Func.new(name, type, param_name_list, param_type_list, body)
+    end
+
+    def foreign_input_gen(input_def)
+      name = input_def[:body][:desc]
+      type = input_def[:decolator].is_a?(InitDef) ? "int" : "void"
+      @codes << CElement::FuncProtoDeclare.new(name, type, ["void"])
+      @templates << CElement::FuncDeclare.new(name, type, param_name_list, param_type_list, [])
+    end
+
+    def constructor_gen(tvalue, type)
+      name = "Const_" + tvalue[:name] + type2cname(type)
     end
 
     def native_func_gen(func_def, func_type, args)
       f = copy_func_def(func_def)
       f[:typing].unify(func_type)
-      func_name = "Func_" + f[:name][:desc] + "_" + func_type.to_uniq_str
-      return_type = f[:typing].typeargs.pop
-      params = f[:params].map{|x| x[:name]}.zip(f[:typing].typeargs).map do |n, t|
-        type_gen(t) + " " + n[:desc]
-      end
-      @codes << CElement::Func.new(func_name, params, type_gen(return_type), body_exp_gen(f[:body]))
+      name = "Func_" + f[:name][:desc] + "_" + type2cname(t)
+      param_name_list = f[:params].map{|x| x[:name][:desc]}
+      param_type_list = f[:typing].typeargs.map{|t| type2cname(t)}
+      type = param_type_list.pop
+      body = body_exp_gen(f[:body])
+      @codes << CElement::FuncDeclare.new(name, type, param_name_list, param_type_list, body)
       return func_name + "(#{args.join(", ")})"
     end
 
     def c_macro_func_gen(func_def, func_type, args)
+      typesize_params, typesize_args = *typesize_params_args(func_def[:typing], func_type)
+      params = func_def[:params].map{|x| x[:name]} + typesize_params
+      name = "PrimMacro_" + func_def[:name][:desc]
+      @codes << CElement::Macro.new(name, params.join, func_def[:body][:desc])
+      args = args + typesize_args
+      return macro_name + "(#{args.join(", ")})"
+    end
+
+    def foreign_func_gen(func_def, func_type, args)
+      name = func_def[:body][:desc]
+      param_name_list = func_def[:params].map{|x| x[:name][:desc]}
+      param_type_list = func_def[:typing].map{|t| type2cname(t)}
+      type = param_type_list.pop
+      # Add typesize as param
+      typesize_params, typesize_args = *typesize_params_args(func_def[:typing], func_type)
+      param_name_list += typesize_params
+      param_type_list += typesize_params.map{"int"}
+      @codes << CElement::FuncProtoDeclare.new(name, type, param_type_list)
+      @templates << CElement::FuncDeclare.new(name, type, param_name_list, param_type_list, [])
+    end
+
+    def exp_gen(exp, &back_proc)
+      back_proc = proc{|e| CElement::ReturnStmt(e)} unless back_proc
+      case exp
+      when FuncCall
+        f = exp[:binder].get
+        case f
+        when SSymbol
+          back_proc.call(foreign_func_gen(f, ))
+        when
+    end
+
+    def type_gen(top)
+      # generate structs
+    end
+
+    def typesize_params_args(utype_with_var, utype_without_var)
       typesize_params = []
       typesize_args = []
-      make_type_var_tbl(func_def[:typing], func_type).each do |k, v|
+      make_type_var_tbl(utype_with_var, utype_without_var).each do |k, v|
         if v.typename.is_a?(Integer)
           typesize_params << k
           typesize_args << v.typename
         end
       end
-      params = func_def[:params].map{|x| x[:name]} + typesize_params
-      macro_name = "Prim_#{func_def[:name]}"
-      @codes << CElement::Macro.new(macro_name, params.join, func_def[:body][:desc])
-      args = args + typesize_args
-      return macro_name + "(#{args.join(", ")})"
-    end
-
-    def foreign_func_gen(func_def, func_type)
-
-    end
-
-    def body_exp_gen(exp)
-      "hoge"
-    end
-
-    def exp_gen(exp)
-
-    end
-
-    def type_gen(utype)
-      # generate struct
-      return utype.to_uniq_str
-    end
-
-    def name2cname(name)
-      name.gsub("@", "_at_")
+      return [typesize_params, typesize_args]
     end
 
     def make_type_var_tbl(utype_with_var, utype_without_var)

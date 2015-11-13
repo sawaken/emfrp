@@ -136,17 +136,6 @@ module Emfrp
         end
       end
 
-      def to_uniq_str
-        if self.var?
-          raise "argument error"
-        end
-        if self.typeargs.size == 0
-          self.typename.to_s
-        else
-          self.typename.to_s + self.typeargs.map{|x| "_" + x.to_uniq_str + "_"}.join
-        end
-      end
-
       def inspect
         if self.var?
           "a#{self.name_id}" + (@original_typevar_name ? "(#{@original_typevar_name})" : "")
