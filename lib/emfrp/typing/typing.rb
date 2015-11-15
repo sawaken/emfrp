@@ -153,12 +153,6 @@ module Emfrp
         real_func_type.unify(expected_func_type)
         exp[:func_typing] = expected_func_type
         return exp[:typing] = return_type
-      when IfExp
-        typing_exp(ftype_tbl, vtype_tbl, exp[:cond]).unify(UnionType.new("Bool", []))
-        return_type = UnionType.new
-        typing_exp(ftype_tbl, vtype_tbl, exp[:then]).unify(return_type)
-        typing_exp(ftype_tbl, vtype_tbl, exp[:else]).unify(return_type)
-        return exp[:typing] = return_type
       when MatchExp
         left_type = typing_exp(ftype_tbl, vtype_tbl, exp[:exp])
         return_type = UnionType.new
