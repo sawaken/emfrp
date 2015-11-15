@@ -69,14 +69,16 @@ module Emfrp
     end
 
     parser :case_group do
-      c = seq(
-        pattern.name(:pattern),
+      cs = seq(
+        many1_fail(pattern, or_separator).name(:patterns),
         many1(ws).err("case-exp", "space"),
         str("->").err("case-exp", "'to'"),
         many1(ws),
         exp.err("match-exp", "invalid exp").name(:exp)
-      ).map{|x| pp x; Case.new(x.to_h)}
-      many1_fail(c, many1(ws)) < many1(ws) < str(":endcase")
+      ).map do |x|
+        x[:patterns].map{|pat| Case.new(:pattern => pat, :exp => x[:exp])}
+      end
+      many1_fail(cs, many1(ws)).map(&:flatten) < many1(ws) < str(":endcase")
     end
 
     parser :pattern do
