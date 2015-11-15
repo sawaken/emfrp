@@ -171,13 +171,6 @@ module Emfrp
         pattern_type = typing_pattern(ftype_tbl, vtype_tbl, exp, exp[:pattern])
         return_type = typing_exp(ftype_tbl, vtype_tbl, exp[:exp])
         return exp[:typing] = UnionType.new("CaseType",  [pattern_type, return_type])
-      when BlockExp
-        exp[:assigns].each do |a|
-          type = typing_exp(ftype_tbl, vtype_tbl, a[:exp])
-          alpha_var = [a[:name], Link.new(exp)]
-          vtype_tbl[alpha_var] = type
-        end
-        return exp[:typing] = typing_exp(ftype_tbl, vtype_tbl, exp[:exp])
       when LiteralIntegral
         return exp[:typing] = UnionType.new("Int", [])
       when LiteralFloating

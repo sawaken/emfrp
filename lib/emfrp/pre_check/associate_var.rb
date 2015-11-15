@@ -29,15 +29,6 @@ module Emfrp
         check_duplicate_name(vars)
         syntax[:binds] = vars
         associate_var(syntax[:exp], [syntax] + binders)
-      when BlockExp
-        check_duplicate_name(syntax[:assigns].map{|x| x[:name]})
-        syntax[:binds] = []
-        new_binders = [syntax] + binders
-        syntax[:assigns].each do |assign|
-          associate_var(assign[:exp], new_binders)
-          syntax[:binds] << assign[:name]
-        end
-        associate_var(syntax[:exp], new_binders)
       when VarRef
         binders.each do |binder|
           if binder[:binds].include?(syntax[:name])

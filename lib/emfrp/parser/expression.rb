@@ -224,7 +224,7 @@ module Emfrp
 
     parser :assign do
       seq(
-        var_name.name(:name),
+        pattern.name(:pattern),
         many(ws),
         str("="),
         many(ws),
