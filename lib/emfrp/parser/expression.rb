@@ -70,14 +70,12 @@ module Emfrp
 
     parser :case_group do
       c = seq(
-        symbol("case").name(:keyword),
-        many1(ws),
-        pattern.err("case-statement", "invalid pattern of case").name(:pattern),
-        many1(ws),
-        str("to").err("caase-statement", "'to'"),
+        pattern.name(:pattern),
+        many1(ws).err("case-exp", "space"),
+        str("->").err("case-exp", "'to'"),
         many1(ws),
         exp.err("match-exp", "invalid exp").name(:exp)
-      ).map{|x| Case.new(x.to_h)}
+      ).map{|x| pp x; Case.new(x.to_h)}
       many1_fail(c, many1(ws)) < many1(ws) < str(":endcase")
     end
 
@@ -177,7 +175,7 @@ module Emfrp
         str("."),
         many(ws),
         ident_begin_lower.err("method_call", "invalid method name").name(:name),
-        opt_fail(many(ws) > str("(") > many(ws) > many_fail(exp, comma_separator) < many(ws) < str(")"))
+        opt_fail(str("(") > many(ws) > many_fail(exp, comma_separator) < many(ws) < str(")"))
           .map{|x| x.flatten}.err("method_call", "invalid form of argument").name(:args)
       ).map do |x|
         proc{|receiver| FuncCall.new(x.to_h, :args => [receiver] + x[:args])}
@@ -198,7 +196,7 @@ module Emfrp
     parser :func_call do
       seq(
         func_name.name(:name),
-        many(ws) > str("(") > many(ws),
+        str("(") > many(ws),
         many1_fail(exp, comma_separator).name(:args),
         many(ws) > str(")")
       ).map do |x|

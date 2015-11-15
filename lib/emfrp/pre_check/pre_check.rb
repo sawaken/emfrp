@@ -26,7 +26,6 @@ module Emfrp
 
     def check(top)
       convert(top)
-      pp top
       generate_tvalue_accessor(top)
       associate_var(top)
       associate_func_and_data(top)
