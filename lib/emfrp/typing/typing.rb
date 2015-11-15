@@ -201,7 +201,7 @@ module Emfrp
       when SkipExp
         return exp[:typing] = UnionType.new
       else
-        raise "error #{exp.class}"
+        raise "unexpected type #{exp.class} (bug)"
       end
     rescue UnionType::UnifyError => err
       err("Type Error", exp, err.a, err.b)

@@ -224,7 +224,10 @@ module Emfrp
         many(ws),
         symbol("}").name(:keyword2)
       ).map do |x|
-        BlockExp.new(x.to_h)
+        x[:assigns].reverse.inject(x[:exp]) do |acc, a|
+          c = Case.new(:pattern => a[:pattern], :exp => acc)
+          MatchExp.new(:cases => [c], :exp => a[:exp])
+        end
       end
     end
 

@@ -6,7 +6,6 @@ require 'emfrp/pre_check/check_recursive_call'
 require 'emfrp/pre_check/check_type'
 require 'emfrp/pre_check/generate_tvalue_accessor'
 require 'emfrp/pre_check/check_skip_position'
-require 'emfrp/pre_check/convert'
 
 module Emfrp
   module PreCheck
@@ -25,7 +24,6 @@ module Emfrp
     end
 
     def check(top)
-      convert(top)
       generate_tvalue_accessor(top)
       associate_var(top)
       associate_func_and_data(top)
