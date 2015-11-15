@@ -59,7 +59,11 @@ module Emfrp
 
   class SSymbol < Syntax
     def ==(other)
-      self[:desc] == other[:desc]
+      if other.is_a?(SSymbol)
+        self[:desc] == other[:desc]
+      else
+        super
+      end
     end
 
     def hash
@@ -67,7 +71,11 @@ module Emfrp
     end
 
     def eql?(other)
-      self.hash == other.hash
+      if other.is_a?(SSymbol)
+        self.hash == other.hash
+      else
+        super
+      end
     end
 
     def pretty_print(q)

@@ -22,6 +22,8 @@ module Emfrp
         when DataDef
           assoc_data(syntax[:name], caller_def, datas)
         end
+      when Syntax
+        associate_func_and_data(syntax.values, caller_def, funcs, datas)
       when Array
         syntax.each do |s|
           associate_func_and_data(s, caller_def, funcs, datas)
@@ -29,20 +31,22 @@ module Emfrp
       end
     end
 
-    def assoc_func(funcname, caller, param_size, caller_def, funcs)
+    def assoc_func(funcname, func_call_exp, param_size, caller_def, funcs)
       fs = funcs.select{|f| f[:name] == funcname}
       if fs.size == 0
-        err("Undefined function call", caller)
+        err("Undefined function call", func_call_exp)
       end
       f = fs.first
       if f[:params].size != param_size
-        err("Wrong number of arguments (#{param_size} for #{f[:params].size})", f, caller)
+        err("Wrong number of arguments (#{param_size} for #{f[:params].size})", f, func_call_exp)
       end
       if caller_def != nil
         caller_def[:depends] << Link.new(f)
         caller_def[:depends].uniq!
       end
-      caller[:func] = Link.new(f)
+
+      func_call_exp[:func] = Link.new(f)
+      #pp func_call_exp
     end
 
     def assoc_data(dataname, caller_def, datas)

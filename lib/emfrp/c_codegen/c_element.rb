@@ -1,5 +1,5 @@
 module Emfrp
-  module CCodeGen
+  class CCodeGen
     module CElement
       I = (0..100).map{|i| "  " * i}
 
@@ -15,11 +15,12 @@ module Emfrp
 
       FuncDeclare = Struct.new(:name, :type, :param_name_list, :param_type_list, :stmts) do
         def to_s(t=0)
-          param_name_list = param_name_list.zip(param_type_list).map{|n, t| "#{t} #{n}"}
-          header = "#{type} #{name}(#{param_list.join(", ")}) {"
-          middles = stmts.map{|x| x.to_s(t+1)}
+          param_list = param_name_list.zip(param_type_list).map{|n, t| "#{t} #{n}"}
+          sorted_stmts = stmts.select{|x| x.is_a?(VarDeclareStmt)} + stmts.reject{|x| x.is_a?(VarDeclareStmt)}
+          header = "#{type} #{name}(#{param_list.join(", ")})\n{"
+          middles = sorted_stmts.map{|x| x.to_s(t+1)}
           footer = "}"
-          return ([header] + middles + [footer]).join("¥n")
+          return ([header] + middles + [footer]).join("\n")
         end
       end
 
@@ -47,7 +48,26 @@ module Emfrp
         end
       end
 
-      
+      IfStmt = Struct.new(:cond_exp, :then_stmts) do
+        def to_s(t=0)
+          sorted_stmts = then_stmts.select{|x| x.is_a?(VarDeclareStmt)} +
+            then_stmts.reject{|x| x.is_a?(VarDeclareStmt)}
+          res = ""
+          res << "if (#{cond_exp})\n"
+          res << I[t] + "{\n"
+          sorted_stmts.each do |x|
+            res << x.to_s(t+1) + "\n"
+          end
+          res << I[t] + "}"
+          return res
+        end
+      end
+
+      IfChainStmt = Struct.new(:if_stmts) do
+        def to_s(t=0)
+          I[t] + if_stmts.map{|x| x.to_s(t)}.join("\n" + I[t] + "else ")
+        end
+      end
     end
   end
 end

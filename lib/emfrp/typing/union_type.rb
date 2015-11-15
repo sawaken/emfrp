@@ -37,7 +37,7 @@ module Emfrp
         when UnionType
           type
         else
-          raise "error"
+          raise "unexpected type #{type.class} (bug)"
         end
       end
 
@@ -57,14 +57,35 @@ module Emfrp
         @union
       end
 
-      def include?(other)
-        unless other.var?
-          raise "argument error for UnionType#include?"
-        end
-        if self.var?
+      def match?(other)
+        if self.var? && other.var?
           self.name_id == other.name_id
+        elsif !self.var? && !other.var?
+          if self.typename == other.typename && self.typeargs.size == other.typeargs.size
+            self.typeargs.zip(other.typeargs).all?{|a, b| a.match?(b)}
+          else
+            false
+          end
         else
-          self.typeargs.any?{|t| t.include?(other)}
+          false
+        end
+      end
+
+      def include?(other)
+        if self.match?(other)
+          true
+        elsif !self.var?
+          self.typeargs.any?{|x| x.include?(other)}
+        else
+          false
+        end
+      end
+
+      def has_var?
+        if self.var?
+          true
+        else
+          self.typeargs.any?{|x| x.has_var?}
         end
       end
 
@@ -136,11 +157,24 @@ module Emfrp
         end
       end
 
+      def to_uniq_str
+        if self.var?
+          raise "error"
+        end
+        if self.typeargs.size > 0
+          "#{self.typename}[#{self.typeargs.map{|t| t.inspect}.join(", ")}]"
+        else
+          "#{self.typename}"
+        end
+      end
+
+
       def inspect
         if self.var?
           "a#{self.name_id}" + (@original_typevar_name ? "(#{@original_typevar_name})" : "")
         else
-          "#{self.typename}[#{self.typeargs.map{|t| t.inspect}.join(", ")}]"
+          args = self.typeargs.size > 0 ? "[#{self.typeargs.map{|t| t.inspect}.join(", ")}]" : ""
+          "#{self.typename}#{args}"
         end
       end
     end

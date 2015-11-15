@@ -133,6 +133,7 @@ module Emfrp
         }.to_h
         vtype_tbl.merge!(param_vtype_tbl)
         n[:typing].unify(typing_exp(ftype_tbl, vtype_tbl, n[:exp]))
+        n[:param_typing] = n[:params].map{|x| ntype_tbl[x[:name]]}
         # Unify with Type Annotation
         if n[:type]
           UnionType.from_type(n[:type]).unify(n[:typing])
@@ -150,6 +151,7 @@ module Emfrp
         expected_func_type = UnionType.new("FuncType", arg_types + [return_type])
         real_func_type = ftype_tbl[func_name].copy
         real_func_type.unify(expected_func_type)
+        exp[:func_typing] = expected_func_type
         return exp[:typing] = return_type
       when IfExp
         typing_exp(ftype_tbl, vtype_tbl, exp[:cond]).unify(UnionType.new("Bool", []))
@@ -240,7 +242,7 @@ module Emfrp
         return pattern[:typing] = return_type
       when TuplePattern
         arg_types = pattern[:args].map{|a| typing_pattern(ftype_tbl, vtype_tbl, binder_case, a)}
-        return_type = UnionType.new("Tuple", types)
+        return_type = UnionType.new("Tuple", arg_types)
         if pattern[:ref]
           alpha_var = [pattern[:ref], Link.new(binder_case)]
           vtype_tbl[alpha_var] = return_type
@@ -259,8 +261,10 @@ module Emfrp
       when FuncDef
         check_unbound_exp_type(syntax.values, syntax[:typing])
       when Syntax
-        if syntax.has_key?(:typing) && syntax[:typing].var? && (type == nil || !type.include?(syntax[:typing]))
-          err("non-determined type occurred", syntax)
+        if syntax.has_key?(:typing) && syntax[:typing].has_var?
+          if type == nil || !type.include?(syntax[:typing])
+            err("non-determined type occurred", syntax)
+          end
         end
         check_unbound_exp_type(syntax.values, type)
       when Array
