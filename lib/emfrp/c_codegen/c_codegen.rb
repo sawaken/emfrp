@@ -39,11 +39,19 @@ module Emfrp
       @codes << CElement::FuncDeclare.new(name, "int", param_name_list, param_type_list, body)
     end
 
-    def foreign_input_gen(input_def)
+    def input_gen(input_def)
       name = input_def[:body][:desc]
       type = input_def[:decolator].is_a?(InitDef) ? "int" : "void"
       @codes << CElement::FuncProtoDeclare.new(name, type, ["void"])
       @templates << CElement::FuncDeclare.new(name, type, param_name_list, param_type_list, [])
+    end
+
+    def output_gen(output_def)
+
+    end
+
+    def initialize_gen(initialize_def)
+
     end
 
     def native_func_gen(func_def, func_type, args)
@@ -96,6 +104,14 @@ module Emfrp
       return name + "(#{args.join(", ")})"
     end
 
+    def foreign_data_gen(data_def)
+
+    end
+
+    def native_data_gen(data_def)
+
+    end
+
     def exp_gen(exp, stmts) # -> String (C-Expression)
       case exp
       when FuncCall
@@ -112,7 +128,7 @@ module Emfrp
       when ValueConst
         args = exp[:args].map{|x| exp_gen(x, stmts)}
         exp[:name][:desc] + "_" + type_name_gen(exp[:typing]) + "(#{args.join(", ")})"
-      when LiteralTuple
+      when LiteralTuple, LiteralArray
         args = exp[:entity].map{|x| exp_gen(x, stmts)}
         type_name_gen(exp[:typing]) + "(#{args.join(", ")})"
       when GFConst
@@ -128,7 +144,6 @@ module Emfrp
         match_exp_gen(exp, return_var_name, stmts)
         return return_var_name
       else
-        pp exp
         raise "unexpected type #{exp.class} (bug)"
       end
     end
@@ -215,10 +230,15 @@ module Emfrp
           :name => row_name,
           :is_static => type_def[:static]
         }
-      elsif utype.typename == "Tuple"
-        row_name = "Tuple" + type_serial_number_gen(utype)
-        tuple_struct_gen(utype, row_name)
-        tuple_constructor_gen(utype, row_name)
+      elsif utype.typename == "Tuple" || utype.typename == "Array"
+        row_name = utype.typename + type_serial_number_gen(utype)
+        if utype.typename == "Tuple"
+          tuple_struct_gen(utype, row_name)
+          tuple_constructor_gen(utype, row_name)
+        elsif utype.typename == "Array"
+          array_struct_gen(utype, row_name)
+          array_constructor_gen(utype, row_name)
+        end
         return @type_tbl[utype.to_uniq_str] = {
           :ref_name => row_name + "*",
           :name => row_name,
@@ -242,6 +262,14 @@ module Emfrp
     end
 
     def tuple_constructor_gen(utype, row_name)
+
+    end
+
+    def array_struct_gen(utype, row_name)
+
+    end
+
+    def array_constructor_gen(utype, row_name)
 
     end
 

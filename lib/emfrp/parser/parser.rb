@@ -17,7 +17,6 @@ module Emfrp
     end
 
     def self.parse(src_str, filename)
-      puts convert_case_group(src_str)
       case res = whole_src.parse_from_string(convert_case_group(src_str), filename)
       when Fail
         if res.status.rest[0]

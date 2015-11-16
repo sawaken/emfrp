@@ -94,7 +94,7 @@ module Emfrp
           type.err("data-def", "type")
         ).to_nil.name(:type),
         many(ws),
-        body_def.err("data-def", "body").name(:body),
+        (exp_body_def | cfunc_body_def).err("data-def", "body").name(:body),
         end_of_def.err("data-def", "valid end of data-def")
       ).map do |x|
         DataDef.new(x.to_h)
@@ -193,22 +193,6 @@ module Emfrp
         end_of_def
       ). map do |x|
         InfixDef.new(x.to_h)
-      end
-    end
-
-    # Initialize associated
-    # --------------------
-
-    parser :initialize_target_def do # -> InitializeTargetDef
-      seq(
-        many1(ws),
-        data_name.name(:name),
-        many(ws),
-        str(":").err("initialize-def", "':' after name"),
-        many(ws),
-        type.err("initialize-def", "type").name(:type)
-      ).map do |x|
-        InitializeTargetDef.new(x.to_h)
       end
     end
 

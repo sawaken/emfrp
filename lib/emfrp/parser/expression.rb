@@ -61,11 +61,11 @@ module Emfrp
 
     parser :match_with_single_case_op do
       seq(
-        str("match"),
+        str("of"),
         many1(ws),
         pattern.err("match-exp", "invalid single-case").name(:pattern),
         many1(ws),
-        str("to"),
+        str("->"),
         many1(ws),
         exp.err("match-exp", "invalid exp").name(:exp)
       ).map do |x|
@@ -82,7 +82,7 @@ module Emfrp
         many1(ws),
         exp.err("match-exp", "invalid exp").name(:exp)
       ).map do |x|
-        x[:patterns].map{|pat| Case.new(:pattern => pat, :exp => x[:exp])}
+        x[:patterns].map{|pat| Case.new(:pattern => pat, :exp => x[:exp].deep_copy)}
       end
       many1_fail(cs, many1(ws)).map(&:flatten) < many1(ws) < str(":endcase")
     end
@@ -217,8 +217,6 @@ module Emfrp
         symbol("{").name(:keyword1),
         many(ws),
         many_fail(many(ws) > assign).name(:assigns),
-        many(ws),
-        str("=>").err("block-exp", "'=>'"),
         many(ws),
         exp.err("block-exp", "valid return-exp").name(:exp),
         many(ws),

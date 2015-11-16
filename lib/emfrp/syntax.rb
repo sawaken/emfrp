@@ -25,6 +25,17 @@ module Emfrp
         target.each{|e| traverse_all_syntax(e, &block)}
       end
     end
+
+    def deep_copy(x=self)
+      case x
+      when Syntax
+        x.class.new(x.map{|k, v| [k, deep_copy(v)]}.to_h)
+      when Array
+        x.map{|x| deep_copy(x)}
+      else
+        x
+      end
+    end
   end
 
   class Link
@@ -105,10 +116,10 @@ module Emfrp
     :NodeParam, :NodeRef, :NodeConstLift, :NodeConstClockEvery, :NodeConstInputQueue,
 
     # Expression
-    :IfExp, :MatchExp, :Case,
+    :MatchExp, :Case,
     :AnyPattern, :ValuePattern, :TuplePattern, :IntegralPattern,
     :UnaryOperatorExp, :OperatorSeq, :BinaryOperatorExp,
-    :MethodCall, :FuncCall, :BlockExp, :Assign, :ValueConst, :GFConst, :SkipExp, :VarRef,
+    :MethodCall, :FuncCall, :Assign, :ValueConst, :GFConst, :SkipExp, :VarRef,
     :LiteralTuple, :LiteralArray, :LiteralString, :LiteralChar,
     :LiteralIntegral, :LiteralFloating
   ]

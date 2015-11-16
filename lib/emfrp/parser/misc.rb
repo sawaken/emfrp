@@ -34,7 +34,11 @@ module Emfrp
     end
 
     parser :ws do # -> ()
-      tabspace | newline
+      tabspace | newline | commentout
+    end
+
+    parser :commentout do # -> ()
+      char("#") > many(non_newline)
     end
 
     parser :newline do #-> ()
@@ -148,7 +152,7 @@ module Emfrp
 
     parser :operator do # -> SSymbol
       usable = OPUsable.chars.map{|c| char(c)}.inject(&:|)
-      ng = ["..", ":", "::", "=", "\\", "|", "<-", "->", "@", "~", "=>", "."]
+      ng = ["..", ":", "::", "=", "\\", "|", "<-", "->", "@", "~", "=>", ".", "#", "@@"]
       many1(usable) >> proc{|items|
         token = items.map{|i| i.item}.join
         if ng.include?(token)
