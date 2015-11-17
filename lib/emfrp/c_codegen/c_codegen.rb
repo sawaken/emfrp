@@ -18,9 +18,10 @@ module Emfrp
 
     def to_s
       macros = @codes.select{|x| x.is_a?(CElement::CMacro)}
+      structs = @codes.select{|x| x.is_a?(CElement::StructDeclare)}.sort{|a, b| a.type_name <=> b.type_name}
       protos = @codes.select{|x| x.is_a?(CElement::FuncProtoDeclare)}.sort{|a, b| a.name <=> b.name}
       funcs = @codes.select{|x| x.is_a?(CElement::FuncDeclare)}.sort{|a, b| a.name <=> b.name}
-      (macros + protos + funcs).map(&:to_s).join("\n")
+      (macros + structs + protos + funcs).map(&:to_s).join("\n")
     end
 
     def node_gen(node_def)
@@ -59,7 +60,7 @@ module Emfrp
       if @func_name_tbl[key]
         return @func_name_tbl[key] + "(#{args.join(", ")})"
       end
-      f = copy_func_def(func_def)
+      f = copy_def(func_def)
       f[:typing].unify(func_type)
       name = name2cname(f[:name][:desc]) + func_serial_number_gen(f[:name])
       param_name_list = f[:params].map{|x| x[:name][:desc]}
@@ -180,7 +181,7 @@ module Emfrp
           tvalue_id = type_def[:tvalues].index{|x| x[:name] == pattern[:name]}
           conds << "#{receiver_exp}" + accessor + "tvalue_type == " + tvalue_id.to_s
         end
-        new_receiver_exp = "#{receiver_exp}" + accessor + pattern[:name][:desc]
+        new_receiver_exp = "#{receiver_exp}" + accessor + "entity." + pattern[:name][:desc]
         pattern[:args].each_with_index do |x, i|
           conds += pattern_to_cond_exps(new_receiver_exp + ".member#{i}", stmts, x)
         end
@@ -223,13 +224,13 @@ module Emfrp
         else
           row_name = utype.typename
         end
-        struct_gen(type_def, utype, row_name)
-        constructor_gen(type_def, utype, row_name)
-        return @type_tbl[utype.to_uniq_str] = {
-          :ref_name => row_name + (type_def[:static] ? "" : "*"),
+        @type_tbl[utype.to_uniq_str] = {
+          :ref_name => "struct " + row_name + (type_def[:static] ? "" : "*"),
           :name => row_name,
           :is_static => type_def[:static]
         }
+        struct_gen(type_def, utype, row_name)
+        return @type_tbl[utype.to_uniq_str]
       elsif utype.typename == "Tuple" || utype.typename == "Array"
         row_name = utype.typename + type_serial_number_gen(utype)
         if utype.typename == "Tuple"
@@ -240,7 +241,7 @@ module Emfrp
           array_constructor_gen(utype, row_name)
         end
         return @type_tbl[utype.to_uniq_str] = {
-          :ref_name => row_name + "*",
+          :ref_name => "struct " + row_name + "*",
           :name => row_name,
           :is_static => false
         }
@@ -250,11 +251,72 @@ module Emfrp
     end
 
     def struct_gen(type_def, utype, row_name)
-
+      decs = []
+      if type_def[:tvalues].size > 1
+        decs << CElement::VarDeclareStmt.new("int", "tvalue_type")
+      end
+      if !type_def[:static]
+        decs << CElement::VarDeclareStmt.new("char", "gc_mark")
+      end
+      tvals = []
+      instantiate_type_def(type_def, utype)[:tvalues].each_with_index do |tvalue, i|
+        constructor_gen(tvalue, utype, type_def, i)
+        if tvalue[:params].size > 0
+          members = []
+          member_types = tvalue[:typing].typeargs.clone
+          member_types.pop
+          member_types.each_with_index do |x, i|
+            members << CElement::VarDeclareStmt.new(type_ref_name_gen(x), "member#{i}")
+          end
+          tvals << CElement::StructDeclare.new("struct", nil, members, tvalue[:name][:desc])
+        end
+      end
+      if tvals.size > 0
+        decs << CElement::StructDeclare.new("union", nil, tvals, "entity")
+      end
+      @codes << CElement::StructDeclare.new("struct", row_name, decs, nil)
     end
 
-    def constructor_gen(type_def, utype, row_name)
-
+    def constructor_gen(tvalue, utype, type_def, tvalue_id)
+      if type_def[:static]
+        constructor_stmts = []
+        constructor_stmts << CElement::VarDeclareStmt.new(type_ref_name_gen(utype), "x")
+        if type_def[:tvalues].size > 1
+          constructor_stmts << CElement::VarAssignStmt.new("x.tvalue_type", tvalue_id.to_s)
+        end
+        tvalue[:params].length.times.map do |i|
+          var_name = "x.entity.#{tvalue[:name][:desc]}.member#{i}"
+          constructor_stmts << CElement::VarAssignStmt.new(var_name, "_a#{i}")
+        end
+        constructor_stmts << CElement::ReturnStmt.new("x")
+      else
+        iterator_var_name = "_itr_" + type_name_gen(utype)
+        buffer_var_name = "_buf_" + type_name_gen(utype)
+        buffer_size_var_name = "_buf_size_" + type_name_gen(utype)
+        stmts = []
+        stmts << CElement::ExpStmt.new("#{iterator_var_name}++")
+        stmts << CElement::ExpStmt.new("#{iterator_var_name} %= #{buffer_size_var_name}")
+        cond = "#{buffer_var_name}[#{iterator_var_name}].gc_mark > _global_loop_counter"
+        res_stmts = []
+        if type_def[:tvalues].size > 1
+          var_name = "#{buffer_var_name}[#{iterator_var_name}].tvalue_type"
+          res_stmts << CElement::VarAssignStmt.new(var_name, tvalue_id.to_s)
+        end
+        tvalue[:params].length.times.map do |i|
+          var_name = "#{buffer_var_name}[#{iterator_var_name}].entity.#{tvalue[:name][:desc]}.member#{i}"
+          res_stmts << CElement::VarAssignStmt.new(var_name, "_a#{i}")
+        end
+        res_stmts << CElement::ReturnStmt.new("#{buffer_var_name} + #{iterator_var_name}")
+        stmts << CElement::IfStmt.new(cond, res_stmts)
+        constructor_stmts = [CElement::WhileStmt.new("1", stmts)]
+      end
+      # Constructor Function
+      param_type_list = tvalue[:typing].typeargs.map{|x| type_ref_name_gen(x)}
+      param_name_list = tvalue[:params].length.times.map{|i| "_a#{i}"}
+      type = param_type_list.pop
+      name = tvalue[:name][:desc] + "_" + type_name_gen(utype)
+      @codes << CElement::FuncProtoDeclare.new(name, type, param_type_list)
+      @codes << CElement::FuncDeclare.new(name, type, param_name_list, param_type_list, constructor_stmts)
     end
 
     def tuple_struct_gen(utype, row_name)
@@ -318,22 +380,28 @@ module Emfrp
       end
     end
 
-    def copy_func_def(x, tbl={})
+    def copy_def(x, tbl={})
       case x
       when Syntax
         new_x = x.dup
         x.keys.each do |k|
-          new_x[k] = copy_func_def(x[k], tbl)
+          new_x[k] = copy_def(x[k], tbl)
         end
         if new_x.has_key?(:typing)
           new_x[:typing] = x[:typing].copy(tbl)
         end
         new_x
       when Array
-        x.map{|a| copy_func_def(a, tbl)}
+        x.map{|a| copy_def(a, tbl)}
       else
         x
       end
+    end
+
+    def instantiate_type_def(type_def, utype)
+      copied_type_def = copy_def(type_def)
+      copied_type_def[:typing].unify(utype)
+      return copied_type_def
     end
   end
 end

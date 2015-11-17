@@ -48,14 +48,24 @@ module Emfrp
         end
       end
 
-      IfStmt = Struct.new(:cond_exp, :then_stmts) do
+      ExpStmt = Struct.new(:exp) do
         def to_s(t=0)
-          sorted_stmts = then_stmts.select{|x| x.is_a?(VarDeclareStmt)} +
-            then_stmts.reject{|x| x.is_a?(VarDeclareStmt)}
+          I[t] + "#{exp};"
+        end
+      end
+
+      BlockStmt = Struct.new(:name, :cond, :stmts) do
+        def sort_stmts
+          tmp = stmts.select{|x| x.is_a?(VarDeclareStmt)} + stmts.reject{|x| x.is_a?(VarDeclareStmt)}
+          stmts = tmp
+        end
+
+        def to_s(t=0, indent_first=true)
+          sort_stmts()
           res = ""
-          res << "if (#{cond_exp})\n"
+          res << (indent_first ? I[t] : "") + "#{name} (#{cond})\n"
           res << I[t] + "{\n"
-          sorted_stmts.each do |x|
+          stmts.each do |x|
             res << x.to_s(t+1) + "\n"
           end
           res << I[t] + "}"
@@ -63,9 +73,34 @@ module Emfrp
         end
       end
 
+      WhileStmt = Struct.new(:cond_exp, :stmts) do
+        def to_s(t=0, indent_first=true)
+          BlockStmt.new("while", cond_exp, stmts).to_s(t, indent_first)
+        end
+      end
+
+      IfStmt = Struct.new(:cond_exp, :then_stmts) do
+        def to_s(t=0, indent_first=true)
+          BlockStmt.new("if", cond_exp, then_stmts).to_s(t, indent_first)
+        end
+      end
+
       IfChainStmt = Struct.new(:if_stmts) do
         def to_s(t=0)
-          I[t] + if_stmts.map{|x| x.to_s(t)}.join("\n" + I[t] + "else ")
+          I[t] + if_stmts.map{|x|
+            x.to_s(t, false)
+          }.join("\n" + I[t] + "else ")
+        end
+      end
+
+      StructDeclare = Struct.new(:kind, :type_name, :declares, :instance_name) do
+        def to_s(t=0)
+          res = ""
+          res << I[t] + "#{[kind, type_name].join(" ")}\n"
+          res << I[t] + "{\n"
+          res << declares.map{|x| x.to_s(t+1)}.join("\n") + "\n"
+          res << I[t] + "}" + instance_name.to_s + ";"
+          return res
         end
       end
     end

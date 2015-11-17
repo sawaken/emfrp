@@ -51,7 +51,7 @@ module Emfrp
 
     parser :match_with_group_case_op do
       seq(
-        str("match:"),
+        str("of:"),
         many(ws),
         case_group.err("match-exp", "valid case statement").name(:cases)
       ).map do |x|

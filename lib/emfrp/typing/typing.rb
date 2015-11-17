@@ -3,7 +3,17 @@ require 'emfrp/typing/union_type'
 module Emfrp
   module Typing
     extend self
-    TypingError = Class.new(RuntimeError)
+    class TypingError < RuntimeError
+      def initialize(message, factors)
+        @message, @factors = message, factors
+      end
+
+      def print
+        require 'pp'
+        puts @message + ":"
+        pp @factors
+      end
+    end
 
     class Tbl < Hash
       def [](key)
@@ -16,7 +26,7 @@ module Emfrp
     end
 
     def err(message, *factors)
-      raise TypingError.new(:message => message, :factors => factors)
+      raise TypingError.new(message, factors)
     end
 
     def typing(top)
@@ -34,10 +44,12 @@ module Emfrp
 
     def typing_tvalues(ftype_tbl, type_defs)
       type_defs.each do |td|
-        return_type = td[:type]
+        type_var_tbl = {}
+        td[:typing] = UnionType.from_type(td[:type], type_var_tbl)
         td[:tvalues].each do |tv|
-          param_types = tv[:params].map{|param| param[:type]}
-          ftype_tbl[tv[:name]] = UnionType.from_type(make_func_type(return_type, param_types))
+          param_types = tv[:params].map{|x| UnionType.from_type(x[:type], type_var_tbl)}
+          tv[:typing] = UnionType.new("FuncType", param_types + [td[:typing]])
+          ftype_tbl[tv[:name]] = tv[:typing]
         end
       end
     end
@@ -245,11 +257,11 @@ module Emfrp
 
     def check_unbound_exp_type(syntax, type=nil)
       case syntax
-      when FuncDef
+      when FuncDef, TypeDef
         check_unbound_exp_type(syntax.values, syntax[:typing])
       when Syntax
         if syntax.has_key?(:typing) && syntax[:typing].has_var?
-          if type == nil || !type.include?(syntax[:typing])
+          if type == nil || syntax[:typing].typevars.any?{|t| !type.include?(t)}
             err("non-determined type occurred", syntax)
           end
         end
