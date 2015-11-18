@@ -6,22 +6,13 @@ require 'emfrp/pre_check/check_recursive_call'
 require 'emfrp/pre_check/check_type'
 require 'emfrp/pre_check/generate_tvalue_accessor'
 require 'emfrp/pre_check/check_skip_position'
+require 'emfrp/compile_error'
 
 module Emfrp
   module PreCheck
     extend self
-    #PreCheckError = Class.new(RuntimeError)
-    class PreCheckError < RuntimeError
-      def initialize(message, factors)
-        @message, @factors = message, factors
-      end
 
-      def print
-        require 'pp'
-        puts @message + ":"
-        pp @factors
-      end
-    end
+    PreCheckError = Class.new(CompileError)
 
     def check(top)
       generate_tvalue_accessor(top)
@@ -35,7 +26,7 @@ module Emfrp
     end
 
     def err(msg, *facts)
-      raise PreCheckError.new(msg, facts)
+      raise PreCheckError.new(msg, *facts)
     end
   end
 end

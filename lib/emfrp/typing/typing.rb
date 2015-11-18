@@ -1,19 +1,11 @@
 require 'emfrp/typing/union_type'
+require 'emfrp/compile_error'
 
 module Emfrp
   module Typing
     extend self
-    class TypingError < RuntimeError
-      def initialize(message, factors)
-        @message, @factors = message, factors
-      end
 
-      def print
-        require 'pp'
-        puts @message + ":"
-        pp @factors
-      end
-    end
+    TypingError = Class.new(CompileError)
 
     class Tbl < Hash
       def [](key)
@@ -26,7 +18,7 @@ module Emfrp
     end
 
     def err(message, *factors)
-      raise TypingError.new(message, factors)
+      raise TypingError.new(message, *factors)
     end
 
     def typing(top)
@@ -170,7 +162,11 @@ module Emfrp
         return_type = UnionType.new
         expected_case_type = UnionType.new("CaseType", [left_type, return_type])
         exp[:cases].each do |c|
-          typing_exp(ftype_tbl, vtype_tbl, c).unify(expected_case_type)
+          begin
+            typing_exp(ftype_tbl, vtype_tbl, c).unify(expected_case_type)
+          rescue UnionType::UnifyError => err
+            err("Type Error", c, err.a, err.b)
+          end
         end
         return exp[:typing] = return_type
       when Case
@@ -212,6 +208,8 @@ module Emfrp
         return exp[:typing] = vtype_tbl[alpha_var]
       when SkipExp
         return exp[:typing] = UnionType.new
+      when ParenthExp
+        return exp[:typing] = typing_exp(ftype_tbl, vtype_tbl, exp[:exp])
       else
         raise "unexpected type #{exp.class} (bug)"
       end

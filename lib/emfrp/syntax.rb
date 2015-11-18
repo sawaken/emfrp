@@ -95,17 +95,21 @@ module Emfrp
   end
 
   class Top < Syntax
-    def initialize(hash={})
-      self[:inputs] = []
-      self[:outputs] = []
-      self[:inits] = []
-      self[:datas] = []
-      self[:funcs] = []
-      self[:nodes] = []
-      self[:types] = []
-      self[:ctypes] = []
-      self[:infixes] = []
-      merge!(hash)
+    ATTRS = [
+      :inputs,
+      :outputs,
+      :inits,
+      :datas,
+      :funcs,
+      :nodes,
+      :types,
+      :ctypes,
+      :infixes,
+    ]
+    def initialize(*tops)
+      ATTRS.each do |a|
+        self[a] = tops.map{|h| h[a]}.flatten
+      end
     end
   end
 
@@ -120,7 +124,7 @@ module Emfrp
     :AnyPattern, :ValuePattern, :TuplePattern, :IntegralPattern,
     :UnaryOperatorExp, :OperatorSeq, :BinaryOperatorExp,
     :MethodCall, :FuncCall, :Assign, :ValueConst, :GFConst, :SkipExp, :VarRef,
-    :LiteralTuple, :LiteralArray, :LiteralString, :LiteralChar,
+    :LiteralTuple, :LiteralArray, :LiteralString, :LiteralChar, :ParenthExp,
     :LiteralIntegral, :LiteralFloating
   ]
   Types.each do |t|

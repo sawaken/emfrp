@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+$LOAD_PATH.unshift File.dirname(__FILE__) + "/../../parser_combinator/lib"
+require 'emfrp'
+
+file_name = File.expand_path('./' + ARGV[0])
+src_str = File.open(file_name, 'r'){|f| f.read}
+Emfrp.main([src_str], [file_name], nil, nil)

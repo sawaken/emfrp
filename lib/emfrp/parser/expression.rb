@@ -143,12 +143,17 @@ module Emfrp
         ).to_nil.name(:ref)
       ).map do |x|
         args = [x[:arg_head]] + x[:arg_tail]
-        TuplePattern.new(:args => args, :ref => x[:ref])
+        TuplePattern.new(
+          :args => args,
+          :ref => x[:ref],
+          :keyword1 => x[:keyword1],
+          :keyword2 => x[:keyword2]
+        )
       end
     end
 
     parser :integral_pattern do
-      integral_literal.map{|n| IntegralPattern.new(:val => n)}
+      integral_literal.map{|n| IntegralPattern.new(:val => n, :ref => nil)}
     end
 
     # Operator Expression
@@ -180,13 +185,34 @@ module Emfrp
 
     parser :method_call do
       seq(
-        str("."),
+        symbol(".").name(:keyword1),
         many(ws),
         ident_begin_lower.err("method_call", "invalid method name").name(:name),
-        opt_fail(str("(") > many(ws) > many_fail(exp, comma_separator) < many(ws) < str(")"))
-          .map{|x| x.flatten}.err("method_call", "invalid form of argument").name(:args)
+        opt_fail(
+          seq(
+            symbol("(").name(:keyword2),
+            many(ws),
+            many_fail(exp, comma_separator).name(:args),
+            many(ws),
+            symbol(")").name(:keyword3)
+          )
+        ).to_nil.name(:args)
       ).map do |x|
-        proc{|receiver| FuncCall.new(x.to_h, :args => [receiver] + x[:args])}
+        proc do |receiver|
+          if x[:args]
+            FuncCall.new(
+              :name => x[:name],
+              :keywords => [x[:keyword1], x[:args][:keyword2], x[:args][:keyword3]],
+              :args => [receiver] + x[:args][:args]
+            )
+          else
+            FuncCall.new(
+              :name => x[:name],
+              :keyword => x[:keyword1],
+              :args => [receiver]
+            )
+          end
+        end
       end
     end
 
@@ -204,9 +230,11 @@ module Emfrp
     parser :func_call do
       seq(
         func_name.name(:name),
-        str("(") > many(ws),
+        symbol("(").name(:keyword1),
+        many(ws),
         many1_fail(exp, comma_separator).name(:args),
-        many(ws) > str(")")
+        many(ws),
+        symbol(")").name(:keyword2)
       ).map do |x|
         FuncCall.new(x.to_h)
       end
@@ -252,10 +280,14 @@ module Emfrp
             many_fail(exp, comma_separator).name(:args),
             many(ws),
             symbol(")").name(:keyword)
-          ).map{|x| x[:args]}
-        ).map(&:flatten).err("value-construction", "invalid form of argument").name(:args)
+          ).name(:args)
+        ).to_nil.err("value-construction", "invalid form of argument").name(:args)
       ).map do |x|
-        ValueConst.new(x.to_h)
+        if x[:args]
+          ValueConst.new(:name => x[:name], :args => x[:args][:args], :keyword => x[:args][:keyword])
+        else
+          ValueConst.new(:name => x[:name], :args => [])
+        end
       end
     end
 
@@ -324,7 +356,7 @@ module Emfrp
         symbol(")").name(:keyword2)
       ).map do |x|
         if x[:entity].size == 1
-          x[:entity].first
+          ParenthExp.new(:parent_begin => x[:keyword1], :parent_end => x[:keyword2], :exp => x[:entity].first)
         else
           LiteralTuple.new(x.to_h)
         end

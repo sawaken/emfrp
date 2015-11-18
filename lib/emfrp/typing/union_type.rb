@@ -97,7 +97,7 @@ module Emfrp
 
       def typevars
         if var?
-          self
+          [self]
         else
           typeargs.map{|t| t.typevars}.flatten
         end

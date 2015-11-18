@@ -5,37 +5,22 @@ require 'emfrp/parser/toplevel'
 require 'emfrp/parser/expression'
 require 'emfrp/parser/misc'
 require 'emfrp/parser/operator'
+require 'emfrp/parser/parsing_error'
 
 module Emfrp
   class Parser < ParserCombinator::StringParser
-    ParsingError = Class.new(RuntimeError)
-
-    def self.parse_all(inputs)
-      inputs.inject([]) do |acc, input|
-        acc + Parser.parse(input[:src], input[:filename])
-      end
-    end
-
-    def self.parse(src_str, filename)
-      case res = whole_src.parse_from_string(convert_case_group(src_str), filename)
-      when Fail
-        if res.status.rest[0]
-          ln = res.status.rest[0].tag[:line_number]
-          col = res.status.rest[0].tag[:column_number]
+    def self.parse_inputs(src_strs, file_names)
+      tops = src_strs.zip(file_names).map do |src_str, file_name|
+        case res = whole_src.parse_from_string(convert_case_group(src_str), file_name)
+        when Fail
+          raise ParsingError.new(src_str, file_name, res.status)
+        when Ok
+          res.parsed
         else
-          ln = src_str.each_line.count
-          col = src_str.each_line.to_a.last.size
+          raise "unexpected return of parser (bug)"
         end
-        line = src_str.each_line.to_a[ln - 1]
-        msg = ""
-        msg << "#{filename}:#{ln}: Syntax error, in `#{res.status.message[:place]}`: "
-        msg << "required #{res.status.message[:required]}\n"
-        msg << "#{line}"
-        msg << "#{" " * (col - 1)}^ \n"
-        raise ParsingError.new(msg)
-      else
-        infix_rearrange(res.parsed)
       end
+      infix_rearrange(Top.new(*tops))
     end
 
     def self.convert_case_group(src_str)

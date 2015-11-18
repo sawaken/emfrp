@@ -144,6 +144,8 @@ module Emfrp
         stmts << CElement::VarDeclareStmt.new(type_ref_name_gen(exp[:typing]), return_var_name)
         match_exp_gen(exp, return_var_name, stmts)
         return return_var_name
+      when ParenthExp
+        exp_gen(exp[:exp], stmts)
       else
         raise "unexpected type #{exp.class} (bug)"
       end

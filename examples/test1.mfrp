@@ -1,0 +1,49 @@
+
+type Maybe[a] = Just(a) | Nothing
+type static Bool = False | True
+ctype Int <- int
+
+func + (a : Int, b : Int) : Int <- { a + b }
+func * (a : Int, b : Int) : Int <- { a * b }
+func - (a : Int, b : Int) : Int <- { a - b }
+func < (a : Int, b : Int) : Bool <- { a < b }
+func @! (a : Bool) : Bool <- { !a }
+
+func inc (a : GF<i>) : GF<i> <- { (a + 1) % i }
+func fetch (ary : Array<i>[a], it : GF<i>) : a <- { ary->elements[it] }
+func size (ary : Array<i>[a]) : Int <- { i }
+
+func hoge(x, y, z) =
+  x of:
+    Just(a) -> a + a
+    Nothing -> y
+
+data dat = {1, 2, 3}
+data gf = dat.fetch(GF(0))
+
+input x : Int <- f
+infixl 7 *
+infixl 6 +
+
+input y : (Maybe[Int], Maybe[Int]) <- f
+
+## 2 -> Just(8)
+## 3 -> Just(18)
+node hoge(x) = Just(x * x + x * x)
+
+node fuga(y) = y of:
+  (Just(a) as j, Just(b) as k) as i -> hoge(j, 1, 2)
+  (Just(a), Nothing) | (Nothing, Just(a))
+    -> a
+  (Nothing, Nothing) -> skip
+
+func f(a, b) = a + b
+
+
+#func fff(a, b) = (Just(b) + Just(a))
+
+# comment out
+node piyo(y) = {
+  y of (Just(a), Just(b)) ->
+    if a < b then a else b.f(x)
+}
