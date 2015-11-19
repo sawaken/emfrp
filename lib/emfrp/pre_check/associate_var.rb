@@ -36,7 +36,7 @@ module Emfrp
             return
           end
         end
-        err("Unbound variable", syntax)
+        err("Unbound variable `#{syntax[:name][:desc]}`:\n", syntax)
       when Syntax
         associate_var(syntax.values, binders)
       when Array
@@ -59,7 +59,7 @@ module Emfrp
       names.each do |name|
         dups = names.select{|x| x == name}
         if dups.size > 1
-          err("Duplicate names", *dups)
+          err("Duplicate names `#{name[:desc]}`:\n", *dups)
         end
       end
     end

@@ -9,7 +9,8 @@ module Emfrp
           type[:tvalues].each do |tvalue|
             if tvalue[:name] == syntax[:name]
               if syntax[:args].size != tvalue[:params].size
-                err("Wrong number of arguments (#{syntax[:args].size} for #{tvalue[:params].size})", tvalue, syntax)
+                s = "#{syntax[:args].size} for #{tvalue[:params].size}"
+                err("Wrong number of arguments (#{s}) for `#{tvalue[:name][:desc]}`:\n", syntax)
               end
               syntax[:type] = Link.new(type)
               associate_constructor(syntax.values, types)
@@ -17,7 +18,7 @@ module Emfrp
             end
           end
         end
-        err("Undefined value constructor", syntax)
+        err("Undefined value-constructor `#{syntax[:name][:desc]}`:\n", syntax)
       when Syntax
         associate_constructor(syntax.values, types)
       when Array

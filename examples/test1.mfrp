@@ -39,11 +39,12 @@ node fuga(y) = y of:
 
 func f(a, b) = a + b
 
+node init[0] aa(aa@last) = 1
 
-#func fff(a, b) = (Just(b) + Just(a))
+#func fff(a, a) = (Just(a) + Just(a))
 
 # comment out
 node piyo(y) = {
   y of (Just(a), Just(b)) ->
-    if a < b then a else b.f(x)
+    if a < b then a else b `f` b
 }

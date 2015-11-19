@@ -12,27 +12,50 @@ module Emfrp
               depended_node[:init]
             end
             unless cond
-              err("Defining init[exp] is needed to specify @last to #{node_ref[:name]}", depended_node)
+              err("Node `#{node_ref[:name][:desc]}` having no init-exp is referred with @last:\n", node_ref)
             end
           end
         end
       end
-      top[:nodes].each{|n| n[:mark] = false}
-      top[:nodes].each{|n| circular_check(top[:nodes], n)}
+      top[:nodes].each do |n|
+        n[:mark] = false
+        n[:prev] = nil
+      end
+      top[:nodes].each do |n|
+        circular_check(top[:nodes], top[:inputs], n)
+      end
+      top[:nodes].each do |n|
+        n.delete(:mark)
+        n.delete(:prev)
+      end
     end
 
-    def circular_check(nodes, node)
-      if node[:mark] != false
-        err("Circular definition of node", node[:mark])
-      end
+    def circular_check(nodes, inputs, node)
       node[:mark] = true
       node[:params].each do |x|
-        if x.is_a?(SSymbol)
-          depended_nodes = nodes.select{|y| y[:name] == x[:name]}.first
-          circular_check(nodes, depended_nodes)
+        if x.is_a?(NodeRef) && !x[:last] && !inputs.find{|i| i[:name] == x[:name]}
+          depended_node = nodes.select{|y| y[:name] == x[:as]}.first
+          if depended_node[:mark] == true
+            trace = ([x] + get_trace(node)).reverse
+            s = "[#{trace.rotate(-1).map{|x| "`#{x[:name][:desc]}`"}.join(" -> ")} -> ...]"
+            err("Circular node-dependency #{s} is detected.\n", *trace)
+          end
+          depended_node[:prev] = node
+          circular_check(nodes, inputs, depended_node)
         end
       end
       node[:mark] = false
+    end
+
+    def get_trace(node)
+      trace = []
+      n = node
+      until n[:prev] == nil || trace.include?(n)
+        ref = n[:prev][:params].find{|param| param.is_a?(NodeRef) && param[:as] == n[:name]}
+        trace << ref
+        n = n[:prev]
+      end
+      return trace
     end
   end
 end

@@ -79,9 +79,8 @@ module Emfrp
     end
 
     def print_error(output_io, src_strs, file_names)
-      output_io << "#{@message}:\n"
+      output_io << "\e[31m[Error]\e[m: #{@message}"
       @factors.each_with_index do |factor, i|
-        output_io << "FACTOR-#{i}: #{factor_name(factor)}\n"
         if find_factor_file_name(factor)
           print_lexical_factor(factor, i, output_io, src_strs, file_names)
         end
