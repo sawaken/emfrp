@@ -21,7 +21,7 @@ module Emfrp
       err.print_error(STDERR, file_loader)
       exit(1)
     end
-    pp top
+
     exit(1)
 
     cgen = CCodeGen.new
@@ -58,10 +58,10 @@ module Emfrp
       path_str = path.is_a?(Array) ? path.join("/") : path
       @include_dirs.each do |d|
         full_path = File.expand_path(d + path_str)
-        if File.exist?(full_path)
+        if File.exist?(full_path) && File.ftype(full_path) == "file"
           src_str = File.open(full_path, 'r'){|f| f.read}
           return @loaded_hash[path] = [src_str, full_path]
-        elsif File.exist?(full_path + ".mfrp")
+        elsif File.exist?(full_path + ".mfrp") && File.ftype(full_path + ".mfrp") == "file"
           src_str = File.open(full_path + ".mfrp", 'r'){|f| f.read}
           return @loaded_hash[path] = [src_str, full_path + ".mfrp"]
         end

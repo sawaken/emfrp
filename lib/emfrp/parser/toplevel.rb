@@ -98,6 +98,9 @@ module Emfrp
     parser :input_def do
       seq(
         var_name.name(:name),
+        opt_fail(
+          symbol("(") > exp < symbol(")")
+        ).to_nil.name(:init_exp),
         many(ws),
         str(":"),
         many(ws),
@@ -168,7 +171,7 @@ module Emfrp
     parser :node_def do # -> NodeDef
       seq(
         symbol("node").name(:keyword),
-        opt(many1(ws) > init_def).to_nil.name(:init),
+        opt(many1(ws) > init_def).to_nil.name(:init_exp),
         many1(ws),
         node_instance_name.err("node-def", "node name").name(:name),
         many(ws),
@@ -179,7 +182,9 @@ module Emfrp
           many(ws) > str(":") > many(ws) > type.err("node-def", "[Type] after :")
         ).to_nil.name(:type),
         many(ws),
-        exp_body_def.err("node-def", "body").name(:exp),
+        str("="),
+        many(ws),
+        exp.err("node-def", "body").name(:exp),
         end_of_def.err("node-def", "valid end of node-def")
       ).map do |x|
         NodeDef.new(x.to_h)
@@ -312,30 +317,8 @@ module Emfrp
       end
     end
 
-    parser :exp_body_def do
-      str("=") > many(ws) > exp.err("body-def", "valid expression")
-    end
-
-    parser :cexp_body_def do
-      str("<-") > many(ws) > cexp
-    end
-
-    parser :cfunc_body_def do
-      str("<-") > many(ws) > cfunc_name
-    end
-
-    parser :body_def do
-      cexp_body_def ^ cfunc_body_def ^ exp_body_def
-    end
-
     # Node associated
     # --------------------
-
-
-
-    parser :node_ref do
-      node_name_last | node_name_current
-    end
 
     parser :init_def do # -> InitDef
       seq(
@@ -347,15 +330,19 @@ module Emfrp
         many(ws),
         symbol("]").name(:keyword)
       ).map do |x|
-        InitDef.new(x.to_h)
+        x[:exp]
       end
+    end
+
+    parser :node_ref do
+      node_name_last | node_name_current
     end
 
     parser :node_name_last do
       seq(
         node_instance_name.name(:name),
         symbol("@last").name(:keyword),
-        opt_fail(str("as") > var_name.err("node-parameter", "name as exposed")).to_nil.name(:as)
+        opt_fail(many(ws) > str("as") > many(ws) > var_name.err("node-parameter", "name as exposed")).to_nil.name(:as)
       ).map do |x|
         as = x[:as] || SSymbol.new(
           :desc => x[:name][:desc] + "@last",
@@ -369,7 +356,7 @@ module Emfrp
     parser :node_name_current do
       seq(
         node_instance_name.name(:name),
-        opt_fail(str("as") > var_name.err("node-parameter", "name as exposed")).to_nil.name(:as)
+        opt_fail(many(ws) > str("as") > many(ws) > var_name.err("node-parameter", "name as exposed")).to_nil.name(:as)
       ).map do |x|
         NodeRef.new(:last => false, :as => x[:as] || x[:name], :name => x[:name])
       end
@@ -401,7 +388,7 @@ module Emfrp
         many1_fail(inner, comma_separator).err("type", "list of type").name(:args),
         symbol(")").err("type", "')'").name(:keyword2)
       ).map do |x|
-        type_name = SSymbol.new(:desc => "Tuple" + (x[:args].size + 1).to_s)
+        type_name = SSymbol.new(:desc => "Tuple" + x[:args].size.to_s)
         Type.new(x.to_h, :name => type_name)
       end
     end

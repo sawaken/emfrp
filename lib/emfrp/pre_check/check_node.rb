@@ -5,13 +5,7 @@ module Emfrp
         n[:params].each do |node_ref|
           if node_ref.is_a?(NodeRef) && node_ref[:last]
             depended_node = (top[:nodes] + top[:inputs]).select{|x| x[:name] == node_ref[:name]}.first
-            cond = case depended_node
-            when InputDef
-              depended_node[:decolator].is_a?(InitDef)
-            when NodeDef
-              depended_node[:init]
-            end
-            unless cond
+            unless depended_node[:init_exp]
               err("Node `#{node_ref[:name][:desc]}` having no init-exp is referred with @last:\n", node_ref)
             end
           end
@@ -35,6 +29,9 @@ module Emfrp
       node[:params].each do |x|
         if x.is_a?(NodeRef) && !x[:last] && !inputs.find{|i| i[:name] == x[:name]}
           depended_node = nodes.select{|y| y[:name] == x[:as]}.first
+          unless depended_node
+            err("Undefined node `#{x[:as][:desc]}` is referred:\n", x)
+          end
           if depended_node[:mark] == true
             trace = ([x] + get_trace(node)).reverse
             s = "[#{trace.rotate(-1).map{|x| "`#{x[:name][:desc]}`"}.join(" -> ")} -> ...]"

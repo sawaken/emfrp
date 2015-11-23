@@ -11,7 +11,6 @@ module Emfrp
       attr_reader :typename, :typeargs
       attr_accessor :name_id, :original_typevar_name, :union
 
-      Set = []
 
       def self.from_type(type, tbl={})
         case type
@@ -41,7 +40,6 @@ module Emfrp
         elsif args.length == 0
           @union = [self]
           @name_id = NameCounter.shift
-          Set << self
         else
           raise "Wrong number of arguments (#{args.length} for 0, 2)"
         end
@@ -127,21 +125,17 @@ module Emfrp
             raise UnifyError.new(nil, nil)
           end
         elsif !self.var? && other.var?
-          puts "#{other.union.inspect} into #{self.inspect}"
           other.union.each do |t|
             self.occur_check(t)
             t.transform(self)
           end
         elsif self.var? && !other.var?
-          puts "#{self.union.inspect} into #{other.inspect}"
           self.union.each do |t|
             other.occur_check(t)
             t.transform(other)
           end
         else
-          #puts self.inspect + " and " + other.inspect
           self.unite(self, other)
-          #puts self.union.inspect + " and " + other.union.inspect
         end
       rescue UnifyError => err
         raise UnifyError.new(self, other)

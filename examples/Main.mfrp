@@ -1,6 +1,30 @@
-module Main in x : Int out y : Int use Mat
+module Main
+in x(123) : Int, y : (Maybe[Int], Maybe[Int])
+out y : Int
+use Std
 
 func hoge(x, y, z) =
   x of:
     Just(a) -> a + a
-    Nothing -> y
+    Nothing -> z
+
+func f(x, y) = x + y
+
+node hoge(x) = Just(x * x + x * x)
+
+node fuga(y) = y of:
+  (Just(a) as j, Just(b) as k) -> hoge(j, 1, 2)
+  (Just(a), Nothing) | (Nothing, Just(a)) -> a
+  (Nothing, Nothing) -> 2
+
+node init[0] aa(aa@last) = 1
+
+#func fff(a, a) = (Just(a) + Just(a))
+
+# comment out
+node piyo(y) = {
+  y of (Just(a), Just(b)) ->
+    if a < b then a else b.f(3)
+}
+
+node y() = 2

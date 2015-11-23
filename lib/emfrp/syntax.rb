@@ -121,7 +121,7 @@ module Emfrp
     :InputDef, :OutputDef, :DataDef, :FuncDef, :NodeDef, :TypeDef, :InfixDef,
     :PrimTypeDef, :PrimFuncDef,
 
-    :ParamDef, :Type, :TypeVar, :TValue, :TValueParam, :NodeConst, :InitDef, :LazyDef, :ForeignExp,
+    :ParamDef, :Type, :TypeVar, :TValue, :TValueParam, :NodeConst, :ForeignExp,
 
     :NodeRef,
 

@@ -144,7 +144,7 @@ module Emfrp
       ).map do |x|
         args = [x[:arg_head]] + x[:arg_tail]
         ValuePattern.new(
-          :name => SSymbol.new(:desc => "Tuple" + (args.size + 1).to_s),
+          :name => SSymbol.new(:desc => "Tuple" + args.size.to_s),
           :args => args,
           :ref => x[:ref],
           :keyword1 => x[:keyword1],
@@ -336,9 +336,8 @@ module Emfrp
           exp
         else
           ValueConst.new(
-            :name => SSymbol.new(:desc => "Tuple" + (x[:entity].size + 1).to_s),
+            :name => SSymbol.new(:desc => "Tuple" + x[:entity].size.to_s),
             :args => x[:entity],
-            :keyword => x[:args][:keyword],
             :parent_begin => x[:keyword1],
             :parent_end => x[:keyword2]
           )

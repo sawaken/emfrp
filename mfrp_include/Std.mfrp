@@ -1,4 +1,4 @@
-material Mat
+material Std
 
 type Maybe[a] = Just(a) | Nothing
 
