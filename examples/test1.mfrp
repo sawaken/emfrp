@@ -35,7 +35,7 @@ node fuga(y) = y of:
   (Just(a) as j, Just(b) as k) as i -> hoge(j, 1, 2)
   (Just(a), Nothing) | (Nothing, Just(a))
     -> a
-  (Nothing, Nothing) -> skip
+  (Nothing, Nothing) -> Nothing
 
 func f(a, b) = a + b
 
@@ -46,5 +46,5 @@ node init[0] aa(aa@last) = 1
 # comment out
 node piyo(y) = {
   y of (Just(a), Just(b)) ->
-    if a < b then a else b `f` b
+    if a < b then a else b `f` 3
 }

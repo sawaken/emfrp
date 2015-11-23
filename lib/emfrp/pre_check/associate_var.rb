@@ -6,8 +6,8 @@ module Emfrp
       when Top
         check_duplicate_name((syntax[:inputs] + syntax[:nodes]).map{|x| x[:name]})
         check_duplicate_name(syntax[:datas].map{|x| x[:name]})
-        check_duplicate_name(syntax[:funcs].map{|x| x[:name]})
-        check_duplicate_name(syntax[:types].map{|x| x[:type][:name]} + syntax[:ctypes].map{|x| x[:name]})
+        check_duplicate_name((syntax[:funcs] + syntax[:pfuncs]).map{|x| x[:name]})
+        check_duplicate_name(syntax[:types].map{|x| x[:type][:name]} + syntax[:ptypes].map{|x| x[:name]})
         check_duplicate_name(syntax[:types].map{|x| x[:tvalues].map{|x| x[:name]}}.flatten)
         syntax[:datas].each do |data_def|
           data_def[:binds] = [data_def[:name]]

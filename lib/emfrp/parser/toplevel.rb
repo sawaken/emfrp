@@ -6,25 +6,50 @@ module Emfrp
     # Top Level Definition Statements
     # --------------------
 
-    parser :whole_src do
+    parser :module_top_def do
+      data_def ^ func_def ^ node_def ^ type_def ^ infix_def ^ primtype_def ^ primfunc_def
+    end
+
+    parser :material_top_def do
+      data_def ^ func_def ^ type_def ^ infix_def ^ primtype_def ^ primfunc_def
+    end
+
+    parser :module_file do
       seq(
         many(ws),
-        many_fail(top_def, many(ws)).name(:defs),
+        symbol("module").err("module-file", "keyword 'module'").name(:keyword1),
+        many1(ws),
+        ident_begin_upper.name(:name),
+        many1(ws),
+        symbol("in"),
+        many1(ws),
+        many1_fail(input_def, comma_separator).name(:inputs),
+        many1(ws),
+        symbol("out"),
+        many1(ws),
+        many1_fail(output_def, comma_separator).name(:outputs),
+        opt_fail(
+          many1(ws) >
+          symbol("use") >
+          many1(ws) >
+          many1_fail(load_path, comma_separator) <
+          many1(ws)
+        ).map{|x| x == [] ? [] : x[0]}.name(:uses),
         many(ws),
-        end_of_input.err("toplevel", "valid statement")
+        many_fail(module_top_def, many(ws)).name(:defs),
+        many(ws),
+        end_of_input.err("module-file", "valid end of file")
       ).map do |x|
-        t = Top.new
+        t = Top.new(:inputs => x[:inputs], :outputs => x[:outputs], :uses => x[:uses])
         x[:defs].each do |d|
           k = case d
-          when InputDef then :inputs
-          when OutputDef then :outputs
-          when InitializeDef then :inits
           when DataDef then :datas
           when FuncDef then :funcs
           when NodeDef then :nodes
           when TypeDef then :types
-          when CTypeDef then :ctypes
           when InfixDef then :infixes
+          when PrimTypeDef then :ptypes
+          when PrimFuncDef then :pfuncs
           end
           t[k] << d
         end
@@ -32,53 +57,65 @@ module Emfrp
       end
     end
 
-    parser :top_def do
-      input_def ^ output_def ^ initialize_def ^ data_def ^ func_def ^ node_def ^
-      type_def ^ ctype_def ^ infix_def
+    parser :material_file do
+      seq(
+        many(ws),
+        symbol("material").err("material-file", "keyword 'material'").name(:keyword1),
+        many1(ws),
+        ident_begin_upper.name(:name),
+        opt_fail(
+          many1(ws) >
+          symbol("use") >
+          many1(ws) >
+          many1_fail(load_path, comma_separator) <
+          many1(ws),
+        ).to_nil.name(:uses),
+        many(ws),
+        many_fail(material_top_def, many(ws)).name(:defs),
+        many(ws),
+        end_of_input.err("module", "valid end of file")
+      ).map do |x|
+        t = Top.new(:uses => x[:uses])
+        x[:defs].each do |d|
+          k = case d
+          when DataDef then :datas
+          when FuncDef then :funcs
+          when TypeDef then :types
+          when InfixDef then :infixes
+          when PrimTypeDef then :ptypes
+          when PrimFuncDef then :pfuncs
+          end
+          t[k] << d
+        end
+        t
+      end
     end
 
-    parser :input_def do # -> InputDef
+    parser :load_path do
+      many1(ident_begin_upper, str("."))
+    end
+
+    parser :input_def do
       seq(
-        symbol("input").name(:keyword),
-        opt(many1(ws) > decolator_def).to_nil.name(:decolator),
-        many1(ws),
-        node_instance_name.err("input-def", "name of node").name(:name),
+        var_name.name(:name),
         many(ws),
-        str(":").err("input-def", "': [Type]'  after node-name"),
+        str(":"),
         many(ws),
-        type.err("input-def", "type").name(:type),
-        many(ws),
-        cfunc_body_def.err("input-def", "C's function-name after '<-'").name(:cfunc),
-        end_of_def.err("input-def", "valid end of input-def")
+        type.err("param-def", "type").name(:type)
       ).map do |x|
         InputDef.new(x.to_h)
       end
     end
 
-    parser :output_def do # -> OutputDef
+    parser :output_def do
       seq(
-        symbol("output").name(:keyword),
-        many1(ws),
-        opt(str("*")).map{|x| x != []}.name(:asta_flag),
-        node_ref.err("output-def", "name of node or node constructor").name(:node),
+        var_name.name(:name),
         many(ws),
-        str("->").err("output-def", "'->'"),
+        str(":"),
         many(ws),
-        cfunc_name.err("output-def", "name of C's function").name(:cfunc),
-        end_of_def.err("output-def", "valid end of output-def")
+        type.err("param-def", "type").name(:type)
       ).map do |x|
         OutputDef.new(x.to_h)
-      end
-    end
-
-    parser :initialize_def do # -> InitializeDef
-      seq(
-        symbol("initialize").name(:keyword),
-        many(ws),
-        cfunc_body_def.name(:cfunc),
-        end_of_def
-      ).map do |x|
-        InitializeDef.new(x.to_h)
       end
     end
 
@@ -94,7 +131,9 @@ module Emfrp
           type.err("data-def", "type")
         ).to_nil.name(:type),
         many(ws),
-        (exp_body_def | cfunc_body_def).err("data-def", "body").name(:body),
+        str("="),
+        many(ws),
+        exp.err("data-def", "valid expression").name(:exp),
         end_of_def.err("data-def", "valid end of data-def")
       ).map do |x|
         DataDef.new(x.to_h)
@@ -117,7 +156,9 @@ module Emfrp
           type_with_var.err("func-def", "type of return value")
         ).to_nil.name(:type),
         many(ws),
-        body_def.err("func-def", "body").name(:body),
+        str("="),
+        many(ws),
+        exp.err("func-def", "valid expression").name(:exp),
         end_of_def.err("func-def", "valid end of func-def")
       ).map do |x|
         FuncDef.new(x.to_h)
@@ -132,7 +173,7 @@ module Emfrp
         node_instance_name.err("node-def", "node name").name(:name),
         many(ws),
         str("("),
-        many_fail(node_param, comma_separator).err("node-def", "list of param for node").name(:params),
+        many_fail(node_ref, comma_separator).err("node-def", "list of param for node").name(:params),
         str(")"),
         opt_fail(
           many(ws) > str(":") > many(ws) > type.err("node-def", "[Type] after :")
@@ -169,21 +210,6 @@ module Emfrp
       end
     end
 
-    parser :ctype_def do # -> CTypeDef
-      seq(
-        symbol("ctype").name(:keyword),
-        many1(ws),
-        type_symbol.err("ctype-def", "type symbol to be define").name(:name),
-        many(ws),
-        str("<-").err("ctype-def", "'<-'"),
-        many(ws),
-        cfunc_name.err("ctype-def", "type symbol from C").name(:ctype),
-        end_of_def.err("ctype-def", "valid end of ctype-def")
-      ).map do |x|
-        CTypeDef.new(x.to_h)
-      end
-    end
-
     parser :infix_def do # -> InfixDef
       seq(
         (symbol("infixl") | symbol("infixr") | symbol("infix")).name(:type),
@@ -193,6 +219,44 @@ module Emfrp
         end_of_def
       ). map do |x|
         InfixDef.new(x.to_h)
+      end
+    end
+
+    parser :primtype_def do
+      seq(
+        symbol("primtype").name(:keyword),
+        many1(ws),
+        type_symbol.err("primtype-def", "type symbol to be define").name(:name),
+        many(ws),
+        str("=").err("primtype-def", "'='"),
+        many(ws),
+        many1(foreign_exp, comma_separator).err("primtype-def", "foreign-definitions").name(:foreigns),
+        end_of_def.err("primtype-def", "valid end of primtype-def")
+      ).map do |x|
+        PrimTypeDef.new(x.to_h)
+      end
+    end
+
+    parser :primfunc_def do
+      seq(
+        symbol("primfunc").name(:keyword),
+        many1(ws),
+        (func_name | operator).err("primfunc-def", "name of primfunc").name(:name),
+        many(ws),
+        str("("),
+        many1_fail(primfunc_param_def, comma_separator).err("primfunc-def", "list of param for function").name(:params),
+        str(")"),
+        many(ws),
+        str(":"),
+        many(ws),
+        type_with_var.err("func-def", "type of return value").name(:type),
+        many(ws),
+        str("=").err("primfunc-def", "'='"),
+        many(ws),
+        many1(foreign_exp, comma_separator).err("primfunc-def", "foreign-definitions").name(:foreigns),
+        end_of_def.err("primfunc-def", "valid end of primfunc-def")
+      ).map do |x|
+        PrimFuncDef.new(x.to_h)
       end
     end
 
@@ -213,17 +277,32 @@ module Emfrp
       end
     end
 
+    parser :primfunc_param_def do # -> ParamDef
+      seq(
+        var_name.name(:name),
+        many(ws),
+        str(":"),
+        many(ws),
+        type_with_var.err("param-def", "type with type-var").name(:type)
+      ).map do |x|
+        ParamDef.new(x.to_h)
+      end
+    end
+
+
     # Body associated
     # --------------------
 
-    parser :cexp do
+    parser :foreign_exp do
       seq(
+        ident_begin_lower.name(:language),
         symbol("{").name(:keyword1),
         many(ws),
         many1(notchar("}")).name(:items),
         str("}").err("body-def", "'}' after c-expression").name(:keyword2)
       ).map do |x|
-        CExp.new(
+        ForeignExp.new(
+          :language => x[:language],
           :keyword1 => x[:keyword1],
           :keyword2 => x[:keyword2],
           :desc => x[:items].map(&:item).join.strip,
@@ -252,22 +331,10 @@ module Emfrp
     # Node associated
     # --------------------
 
-    parser :node_param do
-      node_ref | node_constructor
-    end
+
 
     parser :node_ref do
       node_name_last | node_name_current
-    end
-
-    parser :decolator_def do
-      lazy_def | init_def
-    end
-
-    parser :lazy_def do # -> LazyDef
-      symbol("lazy").map do |x|
-        LazyDef.new(:keyword => x)
-      end
     end
 
     parser :init_def do # -> InitDef
@@ -282,10 +349,6 @@ module Emfrp
       ).map do |x|
         InitDef.new(x.to_h)
       end
-    end
-
-    parser :node_constructor do
-      input_queue
     end
 
     parser :node_name_last do
@@ -312,47 +375,34 @@ module Emfrp
       end
     end
 
-    parser :input_queue do
-      seq(
-        symbol("InputQueue").name(:keyword1),
-        many(ws),
-        str("[").err("node-constructor", "[args]"),
-        many(ws),
-        string_literal.name(:name),
-        comma_separator,
-        type.name(:type),
-        comma_separator,
-        positive_integer.name(:size),
-        many(ws),
-        symbol("]").err("node-constructor", "']' at end of args").name(:keyword2),
-      ).map do |x|
-        NodeConstInputQueue.new(x.to_h)
-      end
-    end
-
     # Type associated
     # --------------------
 
-    def self.type_parser_gen(inner, type_size)
+    parser :type_with_args do |inner|
       seq(
-        type_symbol,
-        opt_fail(str("<") > type_size.err("type", "type-size") < str(">")).to_nil.name(:size)
-      ) >> proc{|x|
-        type_args = many1_fail(inner, comma_separator).err("type", "list of type for '#{x[0]}'s type-argument")
-        opt_fail(str("[") > type_args < str("]").err("type", "']'")).map do |args|
-          Type.new(:name => x[0], :args => args.flatten, :size => x[:size])
-        end
-      }
+        type_symbol.name(:name),
+        symbol("[").name(:keyword1),
+        many1_fail(inner, comma_separator).err("type", "list of type").name(:args),
+        symbol("]").err("type", "']'").name(:keyword2)
+      ).map do |x|
+        Type.new(x.to_h)
+      end
     end
 
-    def self.type_tuple_parser_gen(inner)
-      type_args = many1_fail(inner, comma_separator).err("type", "list of type for Tuple's type-argument")
+    parser :type_without_args do
+      type_symbol.map do |x|
+        Type.new(:name => x, :args => [])
+      end
+    end
+
+    parser :type_tuple do |inner|
       seq(
         symbol("(").name(:keyword1),
-        type_args.name(:args),
+        many1_fail(inner, comma_separator).err("type", "list of type").name(:args),
         symbol(")").err("type", "')'").name(:keyword2)
       ).map do |x|
-        Type.new(x.to_h, :size => nil, :name => SSymbol.new(:desc => "Tuple"))
+        type_name = SSymbol.new(:desc => "Tuple" + (x[:args].size + 1).to_s)
+        Type.new(x.to_h, :name => type_name)
       end
     end
 
@@ -371,15 +421,15 @@ module Emfrp
     end
 
     parser :type do
-      type_parser_gen(type, positive_integer) ^ type_tuple_parser_gen(type)
+      type_with_args(type) ^ type_tuple(type) ^ type_without_args
     end
 
     parser :type_with_var do
-      type_var ^ type_parser_gen(type_with_var, type_var | positive_integer) ^ type_tuple_parser_gen(type_with_var)
+      type_with_args(type_with_var) ^ type_tuple(type_with_var) ^ type_without_args ^ type_var
     end
 
     parser :type_with_param do
-      type_parser_gen(type_var, type_var) ^ type_tuple_parser_gen(type_var)
+      type_with_args(type_var) ^ type_tuple(type_var) ^ type_without_args
     end
 
     parser :tvalue_def do # -> TValue

@@ -53,14 +53,11 @@ module Emfrp
       klass + " " + name
     end
 
-    def print_lexical_factor(factor, factor_num, output_io, src_strs, file_names)
+    def print_lexical_factor(factor, output_io, file_loader)
       src_lines = nil
       factor_file_name = find_factor_file_name(factor)
-      src_strs.zip(file_names).each do |src_str, file_name|
-        if file_name == factor_file_name
-          src_lines = src_str.each_line.to_a
-        end
-      end
+      src_str = file_loader.get_src_from_full_path(factor_file_name)
+      src_lines = src_str.each_line.to_a
       tags = collect_factor_tags(factor)
       spos = tags.map{|x| x[0]}.min{|a, b| tag_comp(a, b)}
       epos = tags.map{|x| x[1]}.max{|a, b| tag_comp(a, b)}
@@ -78,12 +75,10 @@ module Emfrp
       end
     end
 
-    def print_error(output_io, src_strs, file_names)
+    def print_error(output_io, file_loader)
       output_io << "\e[31m[Error]\e[m: #{@message}"
-      @factors.each_with_index do |factor, i|
-        if find_factor_file_name(factor)
-          print_lexical_factor(factor, i, output_io, src_strs, file_names)
-        end
+      @factors.each do |factor|
+        print_lexical_factor(factor, output_io, file_loader)
       end
     end
   end

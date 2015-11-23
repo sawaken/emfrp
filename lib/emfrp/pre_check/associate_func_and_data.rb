@@ -6,10 +6,13 @@ module Emfrp
         syntax[:funcs].each do |f|
           f[:depends] = []
         end
+        syntax[:pfuncs].each do |f|
+          f[:depends] = []
+        end
         syntax[:datas].each do |d|
           d[:depends] = []
         end
-        associate_func_and_data(syntax.values, caller_def, syntax[:funcs], syntax[:datas])
+        associate_func_and_data(syntax.values, caller_def, syntax[:funcs] + syntax[:pfuncs], syntax[:datas])
       when FuncDef
         associate_func_and_data(syntax.values, syntax, funcs, datas)
       when DataDef

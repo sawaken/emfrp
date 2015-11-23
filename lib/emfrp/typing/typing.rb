@@ -5,7 +5,36 @@ module Emfrp
   module Typing
     extend self
 
-    TypingError = Class.new(CompileError)
+    class TypeMatchingError < CompileError
+      def initialize(real_utype, expected_utype, place, *factors)
+        @real_utype = real_utype
+        @expected_utype = expected_utype
+        @place = place
+        @factors = factors
+      end
+
+      def print_error(output_io, file_loader)
+        output_io << "\e[31m[Type Matching Error]\e[m: For #{@place}:\n"
+        output_io << "Expected: \e[32m#{@expected_utype.to_uniq_str}\e[m\n"
+        output_io << "Real: \e[32m#{@real_utype.to_uniq_str}\e[m\n"
+        @factors.each do |factor|
+          print_lexical_factor(factor, output_io, file_loader)
+        end
+      end
+    end
+
+    class TypeDetermineError < CompileError
+      def initialize(undetermined_utype, factor)
+        @utype = undetermined_utype
+        @factor = factor
+      end
+
+      def print_error(output_io, file_loader)
+        output_io << "\e[31m[Undetermined Type Error]\e[m:\n"
+        output_io << "Undetermined: \e[32m#{@utype.to_uniq_str}\e[m\n"
+        print_lexical_factor(@factor, output_io, file_loader)
+      end
+    end
 
     class Tbl < Hash
       def [](key)
@@ -17,21 +46,18 @@ module Emfrp
       end
     end
 
-    def err(message, *factors)
-      raise TypingError.new(message, *factors)
-    end
-
     def typing(top)
       ftype_tbl = Tbl.new
       vtype_tbl = Tbl.new
       ntype_tbl = Tbl.new
       typing_tvalues(ftype_tbl, top[:types])
+      typing_pfuncs(ftype_tbl, top[:pfuncs])
       typing_funcs_and_datas(ftype_tbl, vtype_tbl, top[:funcs], top[:datas])
       typing_inputs(ntype_tbl, top[:inputs])
       typing_nodes(ftype_tbl, vtype_tbl, ntype_tbl, top[:nodes])
+      pp top[:funcs]
+      p UnionType::Set.map{|x| x.inspect + "{#{(x.union||[]).map(&:inspect).join(", ")}}"}
       check_unbound_exp_type(top)
-      #pp ftype_tbl
-      #pp vtype_tbl
     end
 
     def typing_tvalues(ftype_tbl, type_defs)
@@ -43,6 +69,16 @@ module Emfrp
           tv[:typing] = UnionType.new("FuncType", param_types + [td[:typing]])
           ftype_tbl[tv[:name]] = tv[:typing]
         end
+      end
+    end
+
+    def typing_pfuncs(ftype_tbl, pfunc_def)
+      pfunc_def.each do |pfunc_def|
+        return_type = pfunc_def[:type]
+        param_types = pfunc_def[:params].map{|param| param[:type]}
+        func_type = UnionType.from_type(make_func_type(return_type, param_types))
+        ftype_tbl[pfunc_def[:name]] = func_type
+        pfunc_def[:typing] = func_type
       end
     end
 
@@ -72,46 +108,31 @@ module Emfrp
 
     def typing_func(ftype_tbl, vtype_tbl, func_def)
       func_name = func_def[:name]
-      case func_def[:body]
-      when SSymbol, CExp
-        return_type = func_def[:type]
-        param_types = func_def[:params].map{|param| param[:type]}
-        func_type = UnionType.from_type(make_func_type(return_type, param_types))
-        ftype_tbl[func_name] = func_type
-        func_def[:typing] = func_type
-      else
-        param_types = func_def[:params].map{|param| UnionType.new }
-        param_vtype_tbl = func_def[:params].zip(param_types).map{|param, type|
-          alpha_var = [param[:name], Link.new(func_def)]
-          [alpha_var, type]
-        }.to_h
-        vtype_tbl.merge!(param_vtype_tbl)
-        exp_type = typing_exp(ftype_tbl, vtype_tbl, func_def[:body])
-        func_type = UnionType.new("FuncType", param_types + [exp_type])
-        ftype_tbl[func_name] = func_type
-        func_def[:typing] = func_type
-        # Unify with Type Annotation
-        ano_param_types = func_def[:params].map{|x| x[:type] || UnionType.new}
-        ano_return_type = func_def[:type] || UnionType.new
-        func_def[:typing].unify(UnionType.from_type(make_func_type(ano_return_type, ano_param_types)))
-      end
+      param_types = func_def[:params].map{|param| UnionType.new }
+      param_vtype_tbl = func_def[:params].zip(param_types).map{|param, type|
+        alpha_var = [param[:name], Link.new(func_def)]
+        param[:typing] = type
+        [alpha_var, type]
+      }.to_h
+      vtype_tbl.merge!(param_vtype_tbl)
+      exp_type = typing_exp(ftype_tbl, vtype_tbl, func_def[:exp])
+      func_type = UnionType.new("FuncType", param_types + [exp_type])
+      ftype_tbl[func_name] = func_type
+      func_def[:typing] = func_type
+      # Unify with Type Annotation
+      ano_param_types = func_def[:params].map{|x| x[:type] || UnionType.new}
+      ano_return_type = func_def[:type] || UnionType.new
+      func_def[:typing].unify(UnionType.from_type(make_func_type(ano_return_type, ano_param_types)))
     end
 
     def typing_data(ftype_tbl, vtype_tbl, data_def)
       alpha_var = [data_def[:name], Link.new(data_def)]
-      case data_def[:body]
-      when SSymbol, CExp
-        type = UnionType.from_type(data_def[:type])
-        vtype_tbl[alpha_var] = type
-        data_def[:typing] = type
-      else
-        exp_type = typing_exp(ftype_tbl, vtype_tbl, data_def[:body])
-        vtype_tbl[alpha_var] = exp_type
-        data_def[:typing] = exp_type
-        # Unify with Type Annotation
-        if data_def[:type]
-          UnionType.from_type(data_def[:type]).unify(data_def[:typing])
-        end
+      exp_type = typing_exp(ftype_tbl, vtype_tbl, data_def[:exp])
+      vtype_tbl[alpha_var] = exp_type
+      data_def[:typing] = exp_type
+      # Unify with Type Annotation
+      if data_def[:type]
+        UnionType.from_type(data_def[:type]).unify(data_def[:typing])
       end
     end
 
@@ -148,73 +169,47 @@ module Emfrp
     def typing_exp(ftype_tbl, vtype_tbl, exp)
       case exp
       when FuncCall, ValueConst
-        arg_exps = exp[:args]
-        arg_types = arg_exps.map{|a| typing_exp(ftype_tbl, vtype_tbl, a)}
+        real_func_type = ftype_tbl[exp[:name]].clone_utype
+        # unify arg-types
+        expected_arg_types = real_func_type.typeargs.take(real_func_type.typeargs.length - 1)
+        exp[:args].zip(expected_arg_types).each_with_index do |x, i|
+          arg_exp, expected_arg_type = x[0], x[1]
+          arg_type = typing_exp(ftype_tbl, vtype_tbl, arg_exp)
+          try_unify(arg_type, expected_arg_type, "#{ordinalize(i+1)} argument of `#{exp[:name][:desc]}`", arg_exp)
+        end
+        #unify return-type
         return_type = UnionType.new
-        func_name = exp[:name]
-        expected_func_type = UnionType.new("FuncType", arg_types + [return_type])
-        real_func_type = ftype_tbl[func_name].copy
-        real_func_type.unify(expected_func_type)
-        exp[:func_typing] = expected_func_type
+        expected_return_type = real_func_type.typeargs.last
+        return_type.unify(expected_return_type)
         return exp[:typing] = return_type
       when MatchExp
         left_type = typing_exp(ftype_tbl, vtype_tbl, exp[:exp])
-        return_type = UnionType.new
-        expected_case_type = UnionType.new("CaseType", [left_type, return_type])
         exp[:cases].each do |c|
-          begin
-            typing_exp(ftype_tbl, vtype_tbl, c).unify(expected_case_type)
-          rescue UnionType::UnifyError => err
-            err("Type Error", c, err.a, err.b)
-          end
+          pattern_type = typing_pattern(ftype_tbl, vtype_tbl, c, c[:pattern])
+          try_unify(pattern_type, left_type, "pattern in matching", c[:pattern])
+        end
+        return_type = UnionType.new
+        exp[:cases].each do |c|
+          exp_type = typing_exp(ftype_tbl, vtype_tbl, c[:exp])
+          try_unify(exp_type, return_type, "expression in matching", c[:exp])
         end
         return exp[:typing] = return_type
-      when Case
-        pattern_type = typing_pattern(ftype_tbl, vtype_tbl, exp, exp[:pattern])
-        return_type = typing_exp(ftype_tbl, vtype_tbl, exp[:exp])
-        return exp[:typing] = UnionType.new("CaseType",  [pattern_type, return_type])
       when LiteralIntegral
         return exp[:typing] = UnionType.new("Int", [])
       when LiteralFloating
         return exp[:typing] = UnionType.new("Double", [])
       when LiteralChar
         return exp[:typing] = UnionType.new("Char", [])
-      when LiteralTuple
-        types = exp[:entity].map{|e| typing_exp(ftype_tbl, vtype_tbl, e)}
-        return_type = UnionType.new("Tuple", types)
-        return exp[:typing] = return_type
-      when LiteralArray
-        entity_type = UnionType.new
-        exp[:entity].each do |e|
-          typing_exp(ftype_tbl, vtype_tbl, e).unify(entity_type)
-        end
-        type_size = UnionType.new(exp[:entity].size, [])
-        return exp[:typing] = UnionType.new("Array", [type_size, entity_type])
-      when LiteralString
-        type_size = UnionType.new(exp[:entity].size, [])
-        char_type = UnionType.new("Char", [])
-        return exp[:typing] = UnionType.new("Array", [type_size,  char_type])
-      when GFConst
-        if exp[:size]
-          type_size = UnionType.new(exp[:size][:desc].to_i, [])
-        else
-          type_size = UnionType.new
-        end
-        int_type = UnionType.new("Int", [])
-        typing_exp(ftype_tbl, vtype_tbl, exp[:exp]).unify(int_type)
-        return exp[:typing] = UnionType.new("GF", [type_size])
       when VarRef
         alpha_var = [exp[:name], exp[:binder]]
         return exp[:typing] = vtype_tbl[alpha_var]
       when SkipExp
         return exp[:typing] = UnionType.new
-      when ParenthExp
-        return exp[:typing] = typing_exp(ftype_tbl, vtype_tbl, exp[:exp])
       else
         raise "unexpected type #{exp.class} (bug)"
       end
     rescue UnionType::UnifyError => err
-      err("Type Error", exp, err.a, err.b)
+      raise "Uncatched UnifyError (bug)"
     end
 
     def typing_pattern(ftype_tbl, vtype_tbl, binder_case, pattern)
@@ -230,16 +225,8 @@ module Emfrp
         arg_types = pattern[:args].map{|a| typing_pattern(ftype_tbl, vtype_tbl, binder_case, a)}
         return_type = UnionType.new
         expected_func_type = UnionType.new("FuncType", arg_types + [return_type])
-        real_func_type = ftype_tbl[pattern[:name]].copy
+        real_func_type = ftype_tbl[pattern[:name]].clone_utype
         real_func_type.unify(expected_func_type)
-        if pattern[:ref]
-          alpha_var = [pattern[:ref], Link.new(binder_case)]
-          vtype_tbl[alpha_var] = return_type
-        end
-        return pattern[:typing] = return_type
-      when TuplePattern
-        arg_types = pattern[:args].map{|a| typing_pattern(ftype_tbl, vtype_tbl, binder_case, a)}
-        return_type = UnionType.new("Tuple", arg_types)
         if pattern[:ref]
           alpha_var = [pattern[:ref], Link.new(binder_case)]
           vtype_tbl[alpha_var] = return_type
@@ -250,17 +237,19 @@ module Emfrp
         return pattern[:typing] = type
       end
     rescue UnionType::UnifyError => err
-      err("Type Error", pattern, err.a, err.b)
+      raise TypeMatchingError.new("Type Error", pattern, err.a, err.b)
     end
 
     def check_unbound_exp_type(syntax, type=nil)
       case syntax
       when FuncDef, TypeDef
         check_unbound_exp_type(syntax.values, syntax[:typing])
+      when NodeDef
+        check_unbound_exp_type(syntax.values, nil)
       when Syntax
         if syntax.has_key?(:typing) && syntax[:typing].has_var?
           if type == nil || syntax[:typing].typevars.any?{|t| !type.include?(t)}
-            err("non-determined type occurred", syntax)
+            raise TypeDetermineError.new(syntax[:typing], syntax)
           end
         end
         check_unbound_exp_type(syntax.values, type)
@@ -268,6 +257,23 @@ module Emfrp
         syntax.map{|e| check_unbound_exp_type(e, type)}
       else
         # do nothing
+      end
+    end
+
+    def try_unify(real_utype, expected_utype, place, *factors)
+      #print [real_utype, expected_utype].inspect
+      real_utype.unify(expected_utype)
+      #puts "->" + [real_utype, expected_utype].inspect
+    rescue  UnionType::UnifyError => err
+      raise TypingError.new(real_utype, expected_utype, place, *factors)
+    end
+
+    def ordinalize(int)
+      int.to_s + case int % 10
+      when 1 then "st"
+      when 2 then "nd"
+      when 3 then "rd"
+      else "th"
       end
     end
 

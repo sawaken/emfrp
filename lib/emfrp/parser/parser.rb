@@ -9,18 +9,23 @@ require 'emfrp/parser/parsing_error'
 
 module Emfrp
   class Parser < ParserCombinator::StringParser
-    def self.parse_inputs(src_strs, file_names)
-      tops = src_strs.zip(file_names).map do |src_str, file_name|
-        case res = whole_src.parse_from_string(convert_case_group(src_str), file_name)
-        when Fail
-          raise ParsingError.new(src_str, file_name, res.status)
-        when Ok
-          res.parsed
-        else
-          raise "unexpected return of parser (bug)"
-        end
+    def self.parse_input(path, file_loader, file_type=module_file)
+      if file_loader.loaded?(path)
+        return Top.new
       end
-      infix_rearrange(Top.new(*tops))
+      src_str, file_name = file_loader.load(path)
+      case res = file_type.parse_from_string(convert_case_group(src_str), file_name)
+      when Fail
+        raise ParsingError.new(src_str, file_name, res.status)
+      when Ok
+        tops = res.parsed[:uses].map do |use_path|
+          parse_input(use_path.map{|x| x[:desc]}, file_loader, material_file)
+        end
+        top = Top.new(*tops, res.parsed)
+        return infix_rearrange(top)
+      else
+        raise "unexpected return of parser (bug)"
+      end
     end
 
     def self.convert_case_group(src_str)

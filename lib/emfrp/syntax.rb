@@ -98,34 +98,39 @@ module Emfrp
     ATTRS = [
       :inputs,
       :outputs,
-      :inits,
+      :uses,
       :datas,
       :funcs,
       :nodes,
       :types,
-      :ctypes,
       :infixes,
+      :ptypes,
+      :pfuncs
     ]
     def initialize(*tops)
       ATTRS.each do |a|
-        self[a] = tops.map{|h| h[a]}.flatten
+        self[a] = []
+        tops.each do |h|
+          self[a] += h[a] if h[a]
+        end
       end
     end
   end
 
   Types = [
-    :InputDef, :OutputDef, :InitializeDef, :DataDef, :FuncDef, :MethodDef, :NodeDef, :TypeDef, :CTypeDef, :InfixDef,
-    :InitializeTargetDef,
-    :ParamDef, :Type, :TypeVar, :TValue, :TValueParam, :NodeConst, :InitDef, :LazyDef, :CExp,
-    :NodeParam, :NodeRef, :NodeConstLift, :NodeConstClockEvery, :NodeConstInputQueue,
+    :InputDef, :OutputDef, :DataDef, :FuncDef, :NodeDef, :TypeDef, :InfixDef,
+    :PrimTypeDef, :PrimFuncDef,
+
+    :ParamDef, :Type, :TypeVar, :TValue, :TValueParam, :NodeConst, :InitDef, :LazyDef, :ForeignExp,
+
+    :NodeRef,
 
     # Expression
     :MatchExp, :Case,
-    :AnyPattern, :ValuePattern, :TuplePattern, :IntegralPattern,
-    :UnaryOperatorExp, :OperatorSeq, :BinaryOperatorExp,
-    :MethodCall, :FuncCall, :Assign, :ValueConst, :GFConst, :SkipExp, :VarRef,
-    :LiteralTuple, :LiteralArray, :LiteralString, :LiteralChar, :ParenthExp,
-    :LiteralIntegral, :LiteralFloating
+    :AnyPattern, :ValuePattern, :IntegralPattern,
+    :OperatorSeq,
+    :FuncCall, :ValueConst, :SkipExp, :VarRef,
+    :LiteralChar, :LiteralIntegral, :LiteralFloating
   ]
   Types.each do |t|
     const_set(t, Class.new(Syntax))

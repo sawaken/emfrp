@@ -8,22 +8,15 @@ module Emfrp
         end
       end
       NameCounter = (0..10000).to_a
-      attr_reader :typename, :typeargs, :union
-      attr_accessor :name_id, :original_typevar_name
+      attr_reader :typename, :typeargs
+      attr_accessor :name_id, :original_typevar_name, :union
+
+      Set = []
 
       def self.from_type(type, tbl={})
         case type
         when Emfrp::Type
-          case type[:size]
-          when nil
-            new(type[:name][:desc], type[:args].map{|a| from_type(a, tbl)})
-          when SSymbol
-            type_size = new(type[:size][:desc].to_i, [])
-            new(type[:name][:desc], [type_size] + args.map{|a| from_type(a, tbl)})
-          when TypeVar
-            args = [type[:size]] + type[:args]
-            new(type[:name][:desc], args.map{|a| from_type(a, tbl)})
-          end
+          new(type[:name][:desc], type[:args].map{|a| from_type(a, tbl)})
         when TypeVar
           name = type[:name][:desc]
           if tbl[name]
@@ -48,6 +41,7 @@ module Emfrp
         elsif args.length == 0
           @union = [self]
           @name_id = NameCounter.shift
+          Set << self
         else
           raise "Wrong number of arguments (#{args.length} for 0, 2)"
         end
@@ -89,10 +83,12 @@ module Emfrp
         end
       end
 
-      def unite(other)
-        @union = (self.union + other.union).uniq
-        substitute_id = @union.map{|t| t.name_id}.min
-        @union.each{|t| t.name_id = substitute_id}
+      def unite(a, b)
+        new_union = (a.union + b.union).uniq
+        substitute_id = new_union.map{|t| t.name_id}.min
+        new_union.each{|t| t.name_id = substitute_id}
+        a.union = new_union
+        b.union = new_union
       end
 
       def typevars
@@ -109,7 +105,7 @@ module Emfrp
         @union = nil
       end
 
-      def copy(tbl={})
+      def clone_utype(tbl={})
         if self.var?
           if tbl[self]
             tbl[self]
@@ -119,7 +115,7 @@ module Emfrp
             alt
           end
         else
-          self.class.new(self.typename, self.typeargs.map{|t| t.copy(tbl)})
+          self.class.new(self.typename, self.typeargs.map{|t| t.clone_utype(tbl)})
         end
       end
 
@@ -131,18 +127,21 @@ module Emfrp
             raise UnifyError.new(nil, nil)
           end
         elsif !self.var? && other.var?
+          puts "#{other.union.inspect} into #{self.inspect}"
           other.union.each do |t|
             self.occur_check(t)
             t.transform(self)
           end
         elsif self.var? && !other.var?
+          puts "#{self.union.inspect} into #{other.inspect}"
           self.union.each do |t|
             other.occur_check(t)
             t.transform(other)
           end
         else
-          self.unite(other)
-          other.unite(self)
+          #puts self.inspect + " and " + other.inspect
+          self.unite(self, other)
+          #puts self.union.inspect + " and " + other.union.inspect
         end
       rescue UnifyError => err
         raise UnifyError.new(self, other)
@@ -162,12 +161,12 @@ module Emfrp
           raise "error"
         end
         if self.typeargs.size > 0
-          "#{self.typename}[#{self.typeargs.map{|t| t.inspect}.join(", ")}]"
+          args = self.typeargs.map{|t| t.inspect}.join(", ")
+          "#{self.typename}[#{args}]"
         else
           "#{self.typename}"
         end
       end
-
 
       def inspect
         if self.var?

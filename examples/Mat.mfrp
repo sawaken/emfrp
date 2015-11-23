@@ -1,0 +1,11 @@
+material Mat
+
+type Maybe[a] = Just(a) | Nothing
+type static Bool = False | True
+primtype Int = c{ int }
+
+primfunc + (a : Int, b : Int) : Int = c{ a + b }
+primfunc * (a : Int, b : Int) : Int = c{ a * b }
+primfunc - (a : Int, b : Int) : Int = c{ a - b }
+primfunc < (a : Int, b : Int) : Bool = c{ a < b }
+primfunc @! (a : Bool) : Bool = c{ !a }

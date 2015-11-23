@@ -1,0 +1,6 @@
+module Main in x : Int out y : Int use Mat
+
+func hoge(x, y, z) =
+  x of:
+    Just(a) -> a + a
+    Nothing -> y

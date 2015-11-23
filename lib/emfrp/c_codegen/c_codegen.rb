@@ -55,7 +55,7 @@ module Emfrp
 
     end
 
-    def native_func_gen(func_def, func_type, args)
+    def native_func_gen(func_def, arg_types, f_type, args)
       key = [func_def[:name], func_type.to_uniq_str]
       if @func_name_tbl[key]
         return @func_name_tbl[key] + "(#{args.join(", ")})"
@@ -74,11 +74,11 @@ module Emfrp
       return name + "(#{args.join(", ")})"
     end
 
-    def c_macro_func_gen(func_def, func_type, args)
+    def c_macro_func_gen(func_def, arg_types, f_type, args)
       if @func_name_tbl[func_def[:name]]
         return @func_name_tbl[func_def[:name]] + "(#{args.join(", ")})"
       end
-      typesize_params, typesize_args = *typesize_params_args(func_def[:typing], func_type)
+      typesize_params, typesize_args = *typesize_params_args(func_def[:typing], func_type) # TODO
       params = func_def[:params].map{|x| x[:name][:desc]} + typesize_params
       name = "Prim_" + name2cname(func_def[:name][:desc])
       @codes << CElement::CMacro.new(name, params, func_def[:body][:desc])
@@ -87,7 +87,7 @@ module Emfrp
       return name + "(#{args.join(", ")})"
     end
 
-    def foreign_func_gen(func_def, func_type, args)
+    def foreign_func_gen(func_def, arg_types, f_type, args)
       if @func_name_tbl[func_def[:name]]
         return @func_name_tbl[func_def[:name]] + "(#{args.join(", ")})"
       end
@@ -118,13 +118,15 @@ module Emfrp
       when FuncCall
         args = exp[:args].map{|x| exp_gen(x, stmts)}
         f = exp[:func].get
+        arg_types = exp[:args].map{|x| x[:typing]}
+        f_type = exp[:typing]
         case f[:body]
         when SSymbol
-          foreign_func_gen(f, exp[:func_typing], args)
+          foreign_func_gen(f, arg_types, f_type, args)
         when CExp
-          c_macro_func_gen(f, exp[:func_typing], args)
+          c_macro_func_gen(f, arg_types, f_type, args)
         else
-          native_func_gen(f, exp[:func_typing], args)
+          native_func_gen(f, arg_types, f_type, args)
         end
       when ValueConst
         args = exp[:args].map{|x| exp_gen(x, stmts)}

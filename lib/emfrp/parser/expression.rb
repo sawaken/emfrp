@@ -143,7 +143,8 @@ module Emfrp
         ).to_nil.name(:ref)
       ).map do |x|
         args = [x[:arg_head]] + x[:arg_tail]
-        TuplePattern.new(
+        ValuePattern.new(
+          :name => SSymbol.new(:desc => "Tuple" + (args.size + 1).to_s),
           :args => args,
           :ref => x[:ref],
           :keyword1 => x[:keyword1],
@@ -217,7 +218,7 @@ module Emfrp
     end
 
     parser :atom do
-      literal_exp ^ single_op ^ func_call ^ block_exp ^ gf_cons ^ value_cons ^ skip ^ var_ref
+      literal_exp ^ single_op ^ func_call ^ block_exp ^ value_cons ^ skip ^ var_ref
     end
 
     parser :single_op do
@@ -257,7 +258,7 @@ module Emfrp
       end
     end
 
-    parser :assign do
+    parser :assign do # -> Hash
       seq(
         pattern.name(:pattern),
         many(ws),
@@ -265,7 +266,7 @@ module Emfrp
         many(ws),
         exp.err("assign", "invalid assign statement").name(:exp)
       ).map do |x|
-        Assign.new(x.to_h)
+        x.to_h
       end
     end
 
@@ -291,21 +292,6 @@ module Emfrp
       end
     end
 
-    parser :gf_cons do # -> ArrayConst
-      seq(
-        symbol("GF").name(:keyword1),
-        opt(positive_integer).to_nil.err("type", "type-size").name(:size),
-        many(ws),
-        str("("),
-        many(ws),
-        exp.err("gf-constructor", "initialize-int-expression").name(:exp),
-        many(ws),
-        symbol(")").name(:keyword2)
-      ).map do |x|
-        GFConst.new(x.to_h)
-      end
-    end
-
     parser :skip do
       symbol("skip").map do |x|
         SkipExp.new(:keyword => x)
@@ -322,19 +308,7 @@ module Emfrp
     # --------------------
 
     parser :literal_exp do
-      string_literal ^ char_literal ^ parenth_or_tuple_literal ^ array_literal ^ floating_literal ^ integral_literal
-    end
-
-    parser :string_literal do
-      seq(
-        symbol('"').name(:keyword1),
-        many((backslash > (doublequote | backslash)) | non_doublequote)
-          .map{|items| items.map{|i| i.item}.join}
-          .name(:entity),
-        symbol('"').name(:keyword2)
-      ).map do |x|
-        LiteralString.new(x.to_h)
-      end
+      char_literal ^ parenth_or_tuple_literal ^ floating_literal ^ integral_literal
     end
 
     parser :char_literal do
@@ -356,22 +330,19 @@ module Emfrp
         symbol(")").name(:keyword2)
       ).map do |x|
         if x[:entity].size == 1
-          ParenthExp.new(:parent_begin => x[:keyword1], :parent_end => x[:keyword2], :exp => x[:entity].first)
+          exp = x[:entity].first
+          exp[:parent_begin] = x[:keyword1]
+          exp[:parent_end] = x[:keyword1]
+          exp
         else
-          LiteralTuple.new(x.to_h)
+          ValueConst.new(
+            :name => SSymbol.new(:desc => "Tuple" + (x[:entity].size + 1).to_s),
+            :args => x[:entity],
+            :keyword => x[:args][:keyword],
+            :parent_begin => x[:keyword1],
+            :parent_end => x[:keyword2]
+          )
         end
-      end
-    end
-
-    parser :array_literal do
-      seq(
-        symbol("{").name(:keyword1),
-        many(ws),
-        many1_fail(exp, comma_separator).name(:entity),
-        many(ws),
-        symbol("}").name(:keyword2)
-      ).map do |x|
-        LiteralArray.new(x.to_h)
       end
     end
 
