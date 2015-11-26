@@ -14,6 +14,10 @@ module Emfrp
         return Top.new
       end
       src_str, file_name = file_loader.load(path)
+      parse_src(src_str, file_name, file_loader, file_type)
+    end
+
+    def self.parse_src(src_str, file_name, file_loader, file_type=module_file)
       case res = file_type.parse_from_string(convert_case_group(src_str), file_name)
       when Fail
         raise ParsingError.new(src_str, file_name, res.status)
@@ -23,6 +27,18 @@ module Emfrp
         end
         top = Top.new(*tops, res.parsed)
         return infix_rearrange(top)
+      else
+        raise "unexpected return of parser (bug)"
+      end
+    end
+
+    def self.exp?(src_str, file_name)
+      exp_input = many(ws) > exp < many(ws) < end_of_input 
+      case res = exp_input.parse_from_string(convert_case_group(src_str), file_name)
+      when Fail
+        false
+      when Ok
+        true
       else
         raise "unexpected return of parser (bug)"
       end

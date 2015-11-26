@@ -2,3 +2,23 @@
 $LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
 $LOAD_PATH.unshift File.dirname(__FILE__) + "/../../parser_combinator/lib"
 require 'emfrp'
+require 'emfrp/interpreter/interpreter'
+require 'readline'
+
+current_dir = Dir.pwd + "/"
+stdlib_dir = File.dirname(__FILE__) + "/../mfrp_include/"
+
+inter = Emfrp::Interpreter.new([current_dir, stdlib_dir], STDOUT)
+while true
+  input = Readline.readline("mfrpi:#{inter.read_num}> ", true)
+  if input == nil
+    puts "bye."
+    exit(0)
+  elsif Emfrp::Parser.exp?(input, "command-line")
+    inter.eval_line(input)
+  elsif input =~ /^\s*\:([a-z]+)\s+(.+)$/
+    inter.command($1, $2)
+  else
+    inter.add_line(input)
+  end
+end

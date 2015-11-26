@@ -34,6 +34,20 @@ module Emfrp
     h_output << c_code.hgen
   end
 
+  def self.parse_material(src_str, file_name, file_loader)
+    top = Parser.parse_src(src_str, file_name, file_loader, Parser.material_file)
+    PreCheck.check(top)
+    Typing.typing(top)
+    return top
+  rescue Parser::ParsingError => err
+    err.print_error(STDERR)
+    raise err
+  rescue CompileError => err
+    err.print_error(STDERR, file_loader)
+    raise err
+  end
+
+
   class FileLoader
     def initialize(include_dirs)
       @include_dirs = include_dirs
@@ -56,6 +70,10 @@ module Emfrp
 
     def load(path)
       path_str = path.is_a?(Array) ? path.join("/") : path
+      if path =~ /^\/.*?/ && File.exist?(path)
+        src_str = File.open(path, 'r'){|f| f.read}
+        return @loaded_hash[path] = [src_str, path]
+      end
       @include_dirs.each do |d|
         full_path = File.expand_path(d + path_str)
         if File.exist?(full_path) && File.ftype(full_path) == "file"

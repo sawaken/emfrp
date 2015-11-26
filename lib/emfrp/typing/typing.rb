@@ -1,40 +1,10 @@
 require 'emfrp/typing/union_type'
+require 'emfrp/typing/typing_error'
 require 'emfrp/compile_error'
 
 module Emfrp
   module Typing
     extend self
-
-    class TypeMatchingError < CompileError
-      def initialize(real_utype, expected_utype, place, *factors)
-        @real_utype = real_utype
-        @expected_utype = expected_utype
-        @place = place
-        @factors = factors
-      end
-
-      def print_error(output_io, file_loader)
-        output_io << "\e[31m[Type Matching Error]\e[m: For #{@place}:\n"
-        output_io << "Expected: \e[32m#{@expected_utype.to_uniq_str}\e[m\n"
-        output_io << "Real: \e[32m#{@real_utype.to_uniq_str}\e[m\n"
-        @factors.each do |factor|
-          print_lexical_factor(factor, output_io, file_loader)
-        end
-      end
-    end
-
-    class TypeDetermineError < CompileError
-      def initialize(undetermined_utype, factor)
-        @utype = undetermined_utype
-        @factor = factor
-      end
-
-      def print_error(output_io, file_loader)
-        output_io << "\e[31m[Undetermined Type Error]\e[m:\n"
-        output_io << "Undetermined: \e[32m#{@utype.to_uniq_str}\e[m\n"
-        print_lexical_factor(@factor, output_io, file_loader)
-      end
-    end
 
     class Tbl < Hash
       def [](key)
@@ -241,6 +211,12 @@ module Emfrp
         check_unbound_exp_type(syntax.values, syntax[:typing])
       when NodeDef
         check_unbound_exp_type(syntax.values, nil)
+      when DataDef
+        if syntax[:name][:desc] =~ /^evaldata[0-9][0-9][0-9]$/
+          # do nothing
+        else
+          check_unbound_exp_type(syntax.values, type)
+        end
       when Syntax
         if syntax.has_key?(:typing) && syntax[:typing].has_var?
           if type == nil || syntax[:typing].typevars.any?{|t| !type.include?(t)}

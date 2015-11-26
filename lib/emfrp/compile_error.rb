@@ -1,3 +1,5 @@
+require 'colorize'
+
 module Emfrp
   class CompileError < RuntimeError
     attr_reader :message, :factors
@@ -66,7 +68,7 @@ module Emfrp
         output_io << "#{factor_file_name}:#{line_nums[0]}:\n"
         output_io << "> " + src_lines[line_nums[0] - 1]
         output_io << "  " + " " * (spos[:column_number] - 1)
-        output_io << "\e[32m" + "^" * (epos[:column_number] - spos[:column_number] + 1) + "\e[m" + "\n"
+        output_io << ("^" * (epos[:column_number] - spos[:column_number] + 1)).colorize(:green) + "\n"
       else
         output_io << "#{factor_file_name}:#{line_nums.first}-#{line_nums.last}:\n"
         line_nums.each do |line_num|

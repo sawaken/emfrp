@@ -11,8 +11,8 @@ type static Bool = False | True
 
 primtype Int = c{ int }
 
-primfunc + (a : Int, b : Int) : Int = c{ a + b }
-primfunc * (a : Int, b : Int) : Int = c{ a * b }
-primfunc - (a : Int, b : Int) : Int = c{ a - b }
-primfunc < (a : Int, b : Int) : Bool = c{ a < b }
-primfunc @! (a : Bool) : Bool = c{ !a }
+primfunc + (a : Int, b : Int) : Int = c{ a + b }, ruby{ a + b }
+primfunc * (a : Int, b : Int) : Int = c{ a * b }, ruby{ a * b }
+primfunc - (a : Int, b : Int) : Int = c{ a - b }, ruby{ a - b }
+primfunc < (a : Int, b : Int) : Bool = c{ a < b }, ruby{ a < b ? [:True] : [:False] }
+primfunc @! (a : Bool) : Bool = c{ !a }, ruby{ a == [:True] ? [:False] : [:True] }

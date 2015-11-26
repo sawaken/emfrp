@@ -1,3 +1,5 @@
+require 'colorize'
+
 module Emfrp
   class Parser
     class ParsingError < StandardError
@@ -32,10 +34,10 @@ module Emfrp
         output_io << "SyntaxError, in `#{@status.message[:place]}`: "
         output_io << "#{@status.message[:required]} is expected"
         if @status.rest.length == 0
-          output_io << ", but parser reached end-of-file"
+          output_io << ", but parser reached end-of-file\n"
         else
-          output_io << "\n#{line}"
-          output_io << "#{" " * (column_number - 1)}^\n"
+          output_io << "\n#{line.chomp}\n"
+          output_io << "#{" " * (column_number - 1)}#{"^".colorize(:green)}\n"
         end
       end
     end
