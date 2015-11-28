@@ -155,7 +155,7 @@ module Emfrp
           raise "error"
         end
         if self.typeargs.size > 0
-          args = self.typeargs.map{|t| t.inspect}.join(", ")
+          args = self.typeargs.map{|t| t.to_uniq_str}.join(", ")
           "#{self.typename}[#{args}]"
         else
           "#{self.typename}"
@@ -167,7 +167,7 @@ module Emfrp
           raise "error"
         end
         if self.typeargs.size > 0
-          args = self.typeargs.map{|t| t.inspect}.join("_")
+          args = self.typeargs.map{|t| t.to_flatten_uniq_str}.join("_")
           "#{self.typename}_#{args}"
         else
           "#{self.typename}"

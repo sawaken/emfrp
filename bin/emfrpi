@@ -12,8 +12,8 @@ inter = Emfrp::Interpreter.new([current_dir, stdlib_dir], STDOUT, ARGV[0] || "St
 while true
   input = Readline.readline("mfrpi:#{inter.read_num}> ", true)
   if input == nil
-    puts "bye."
-    exit(0)
+    inter.end_of_input()
+    break
   elsif Emfrp::Parser.exp?(input, "command-line")
     inter.eval_line(input)
   elsif input =~ /^\s*\:([a-z\-]+)\s*(.*)$/

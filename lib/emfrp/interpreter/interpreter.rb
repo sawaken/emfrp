@@ -36,6 +36,10 @@ module Emfrp
       "%03d" % @read_nums.shift
     end
 
+    def end_of_input
+      puts ""
+    end
+
     def add_line(line)
       @inputs << line
       process_inputs()

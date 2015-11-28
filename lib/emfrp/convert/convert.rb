@@ -13,7 +13,6 @@ module Emfrp
       convert_into_monomorphic(top)
       find_used(top)
       calc_allocs(top)
-      naming(top)
     end
   end
 end
