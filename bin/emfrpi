@@ -8,7 +8,7 @@ require 'readline'
 current_dir = Dir.pwd + "/"
 stdlib_dir = File.dirname(__FILE__) + "/../mfrp_include/"
 
-inter = Emfrp::Interpreter.new([current_dir, stdlib_dir], STDOUT)
+inter = Emfrp::Interpreter.new([current_dir, stdlib_dir], STDOUT, ARGV[0] || "Std")
 while true
   input = Readline.readline("mfrpi:#{inter.read_num}> ", true)
   if input == nil
@@ -16,7 +16,7 @@ while true
     exit(0)
   elsif Emfrp::Parser.exp?(input, "command-line")
     inter.eval_line(input)
-  elsif input =~ /^\s*\:([a-z]+)\s+(.+)$/
+  elsif input =~ /^\s*\:([a-z\-]+)\s*(.*)$/
     inter.command($1, $2)
   else
     inter.add_line(input)

@@ -10,6 +10,14 @@ func hoge(x, y, z) =
 
 func f(x, y) = x + y
 
+func merge(a, b) =
+  (a, b) of:
+    (Just(x), Just(y)) -> Just(x + y)
+    (Just(x), Nothing) | (Nothing, Just(x)) -> Just(x)
+    _ -> Nothing
+
+node foo(x) = Just(x) `merge` Just(x)
+
 node hoge(x) = Just(x * x + x * x)
 
 node fuga(y) = y of:
@@ -27,4 +35,4 @@ node piyo(y) = {
     if a < b then a else b.f(3)
 }
 
-node y() = 2
+#node y() = 2

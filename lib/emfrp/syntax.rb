@@ -39,8 +39,9 @@ module Emfrp
   end
 
   class Link
-    def initialize(syntax)
+    def initialize(syntax, name=nil)
       @link = syntax
+      @name = name
     end
 
     def get
@@ -56,8 +57,8 @@ module Emfrp
     end
 
     def inspect
-      if @link.has_key?(:name)
-        "Link(#{@link[:name][:desc]})"
+      if @name || @link.has_key?(:name)
+        "Link(#{@name || @link[:name][:desc]} : #{@link.class})"
       else
         "Link(#{@link.class})"
       end
@@ -90,7 +91,7 @@ module Emfrp
     end
 
     def pretty_print(q)
-      q.text '"' + self[:desc] + '"'
+      q.text 'SSymbol(' + self[:desc] + ')'
     end
   end
 
@@ -105,7 +106,9 @@ module Emfrp
       :types,
       :infixes,
       :ptypes,
-      :pfuncs
+      :pfuncs,
+      :itypes,
+      :ifuncs,
     ]
     def initialize(*tops)
       ATTRS.each do |a|
@@ -130,7 +133,7 @@ module Emfrp
     :AnyPattern, :ValuePattern, :IntegralPattern,
     :OperatorSeq,
     :FuncCall, :ValueConst, :SkipExp, :VarRef,
-    :LiteralChar, :LiteralIntegral, :LiteralFloating
+    :LiteralChar, :LiteralIntegral, :LiteralFloating,
   ]
   Types.each do |t|
     const_set(t, Class.new(Syntax))

@@ -9,15 +9,15 @@ require 'emfrp/parser/parsing_error'
 
 module Emfrp
   class Parser < ParserCombinator::StringParser
-    def self.parse_input(path, file_loader, file_type=module_file)
+    def self.parse_input(path, file_loader, file_type=module_file, parental_top=nil)
       if file_loader.loaded?(path)
         return Top.new
       end
       src_str, file_name = file_loader.load(path)
-      parse_src(src_str, file_name, file_loader, file_type)
+      parse_src(src_str, file_name, file_loader, file_type, parental_top)
     end
 
-    def self.parse_src(src_str, file_name, file_loader, file_type=module_file)
+    def self.parse_src(src_str, file_name, file_loader, file_type=module_file, parental_top=nil)
       case res = file_type.parse_from_string(convert_case_group(src_str), file_name)
       when Fail
         raise ParsingError.new(src_str, file_name, res.status)
@@ -26,14 +26,18 @@ module Emfrp
           parse_input(use_path.map{|x| x[:desc]}, file_loader, material_file)
         end
         top = Top.new(*tops, res.parsed)
-        return infix_rearrange(top)
+        if parental_top == nil
+          return infix_rearrange(top)
+        else
+          return infix_rearrange(Top.new(top, parental_top))
+        end
       else
         raise "unexpected return of parser (bug)"
       end
     end
 
     def self.exp?(src_str, file_name)
-      exp_input = many(ws) > exp < many(ws) < end_of_input 
+      exp_input = many(ws) > exp < many(ws) < end_of_input
       case res = exp_input.parse_from_string(convert_case_group(src_str), file_name)
       when Fail
         false

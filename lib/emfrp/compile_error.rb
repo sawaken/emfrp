@@ -66,7 +66,7 @@ module Emfrp
       line_nums = (spos[:line_number]..epos[:line_number]).to_a
       if line_nums.size == 1
         output_io << "#{factor_file_name}:#{line_nums[0]}:\n"
-        output_io << "> " + src_lines[line_nums[0] - 1]
+        output_io << "> " + src_lines[line_nums[0] - 1].chomp + "\n"
         output_io << "  " + " " * (spos[:column_number] - 1)
         output_io << ("^" * (epos[:column_number] - spos[:column_number] + 1)).colorize(:green) + "\n"
       else

@@ -12,7 +12,7 @@ module Emfrp
                 s = "#{syntax[:args].size} for #{tvalue[:params].size}"
                 err("Wrong number of arguments (#{s}) for `#{tvalue[:name][:desc]}`:\n", syntax)
               end
-              syntax[:type] = Link.new(type)
+              syntax[:type] = Link.new(type, type[:type][:name][:desc])
               associate_constructor(syntax.values, types)
               return
             end

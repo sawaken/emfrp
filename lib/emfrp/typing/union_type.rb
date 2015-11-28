@@ -162,6 +162,18 @@ module Emfrp
         end
       end
 
+      def to_flatten_uniq_str
+        if self.var?
+          raise "error"
+        end
+        if self.typeargs.size > 0
+          args = self.typeargs.map{|t| t.inspect}.join("_")
+          "#{self.typename}_#{args}"
+        else
+          "#{self.typename}"
+        end
+      end
+
       def inspect
         if self.var?
           "a#{self.name_id}" + (@original_typevar_name ? "(#{@original_typevar_name})" : "")

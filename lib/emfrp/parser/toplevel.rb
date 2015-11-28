@@ -304,15 +304,13 @@ module Emfrp
         symbol("{").name(:keyword1),
         many(ws),
         many1(notchar("}")).name(:items),
-        str("}").err("body-def", "'}' after c-expression").name(:keyword2)
+        symbol("}").err("body-def", "'}' after c-expression").name(:keyword2)
       ).map do |x|
         ForeignExp.new(
           :language => x[:language],
           :keyword1 => x[:keyword1],
           :keyword2 => x[:keyword2],
           :desc => x[:items].map(&:item).join.strip,
-          :start_pos => x[:items][0].tag,
-          :end_pos => x[:items][-1].tag
         )
       end
     end

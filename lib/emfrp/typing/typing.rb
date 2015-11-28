@@ -23,7 +23,7 @@ module Emfrp
       typing_tvalues(ftype_tbl, top[:types])
       typing_pfuncs(ftype_tbl, top[:pfuncs])
       typing_funcs_and_datas(ftype_tbl, vtype_tbl, top[:funcs], top[:datas])
-      typing_inputs(ntype_tbl, top[:inputs])
+      typing_inputs(ftype_tbl, vtype_tbl, ntype_tbl, top[:inputs])
       typing_nodes(ftype_tbl, vtype_tbl, ntype_tbl, top[:nodes])
       check_unbound_exp_type(top)
     end
@@ -104,11 +104,15 @@ module Emfrp
       end
     end
 
-    def typing_inputs(ntype_tbl, input_defs)
+    def typing_inputs(ftype_tbl, vtype_tbl, ntype_tbl, input_defs)
       input_defs.each do |d|
         type = UnionType.from_type(d[:type])
         ntype_tbl[d[:name]] = type
         d[:typing] = type
+        if d[:init_exp]
+          init_exp_type = typing_exp(ftype_tbl, vtype_tbl, d[:init_exp])
+          try_unify(init_exp_type, type, "init-exp for input `#{d[:name][:desc]}`", d[:init_exp])
+        end
       end
     end
 
@@ -131,6 +135,10 @@ module Emfrp
         if n[:type]
           UnionType.from_type(n[:type]).unify(n[:typing])
         end
+        if n[:init_exp]
+          init_exp_type = typing_exp(ftype_tbl, vtype_tbl, n[:init_exp])
+          try_unify(init_exp_type, n[:typing], "init-exp for node `#{n[:name][:desc]}`", n[:init_exp])
+        end
       end
     end
 
@@ -142,7 +150,7 @@ module Emfrp
         # make real-func-type
         return_type = UnionType.new
         arg_types = exp[:args].map{|e| typing_exp(ftype_tbl, vtype_tbl, e)}
-        real_func_type = UnionType.new("Func", arg_types + [return_type])
+        exp[:func_typing] = real_func_type = UnionType.new("Func", arg_types + [return_type])
         try_unify(real_func_type, expected_func_type, "function call `#{exp[:name][:desc]}`", exp)
         # return exp's utype
         return exp[:typing] = return_type
