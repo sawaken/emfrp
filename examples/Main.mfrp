@@ -9,6 +9,7 @@ func hoge(x, y, z) =
     Nothing -> z
 
 func f(x, y) = x + y
+func g(x, y) = x - y
 
 func merge(a, b) =
   (a, b) of:
@@ -34,5 +35,5 @@ node piyo(y) = {
   y of (Just(a), Just(b)) ->
     if a < b then a else b.f(3)
 }
-
-#node y() = 2
+data x = Just(3)
+node xxx() = x

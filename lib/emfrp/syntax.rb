@@ -117,6 +117,7 @@ module Emfrp
           self[a] += h[a] if h[a]
         end
       end
+      self[:module_name] = tops.map{|x| x[:module_name]}.find{|x| x}
     end
   end
 

@@ -4,7 +4,7 @@ require "emfrp/version"
 require "emfrp/parser/parser"
 require 'emfrp/pre_check/pre_check'
 require 'emfrp/typing/typing'
-require 'emfrp/c_codegen/c_codegen'
+require 'emfrp/codegen/c/codegen'
 require 'emfrp/compile_error'
 require 'emfrp/file_loader'
 require 'emfrp/convert/convert'
@@ -16,7 +16,6 @@ module Emfrp
       PreCheck.check(top)
       Typing.typing(top)
       Convert.convert(top)
-      #CaseCompCheck.check(top)
     rescue Parser::ParsingError => err
       err.print_error(STDERR)
       exit(1)
@@ -25,11 +24,10 @@ module Emfrp
       exit(1)
     end
 
-    exit(1)
+    c = CodeGen::C.new(top)
+    c.compile()
+    c.out(STDOUT)
 
-    cgen = CCodeGen.new
-    cgen.gen(top)
-    puts cgen.to_s
 
     exit
     c_code = CCodeGen.compile(top)

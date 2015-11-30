@@ -28,7 +28,7 @@ module Emfrp
       node[:mark] = true
       node[:params].each do |x|
         if x.is_a?(NodeRef) && !x[:last] && !inputs.find{|i| i[:name] == x[:name]}
-          depended_node = nodes.select{|y| y[:name] == x[:as]}.first
+          depended_node = nodes.select{|y| y[:name] == x[:name]}.first
           unless depended_node
             err("Undefined node `#{x[:as][:desc]}` is referred:\n", x)
           end

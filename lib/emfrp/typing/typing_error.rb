@@ -28,7 +28,7 @@ module Emfrp
 
       def print_error(output_io, file_loader)
         output_io << "[Undetermined Type Error]".colorize(:red) + ":\n"
-        output_io << "Undetermined: " + "#{@utype.to_uniq_str}".colorize(:green) + "\n"
+        output_io << "Undetermined: " + "#{@utype.inspect}".colorize(:green) + "\n"
         print_lexical_factor(@factor, output_io, file_loader)
       end
     end

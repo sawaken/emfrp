@@ -1,0 +1,21 @@
+module MostDistantPoint
+in
+  inX : Int,
+  inY : Int
+out
+  outX : Int,
+  outY : Int
+use
+  Std
+
+func distant(a, b) = {
+  (ax, ay) = a
+  (bx, by) = b
+  distantA = ax * ax + ay * ay
+  distantB = bx * bx + by * by
+  if distantA < distantB then b else a
+}
+
+node init[(0, 0)] distantPoint(inX, inY, distantPoint@last as l) = distant((inX, inY), l)
+node outX(distantPoint as p) = p of (x, y) -> x
+node outY(distantPoint as p) = p of (x, y) -> y

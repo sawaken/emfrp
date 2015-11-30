@@ -8,6 +8,30 @@ module Emfrp
       top[:inputs].each do |input_def|
         calc_allocs_exp(input_def[:init_exp]) if input_def[:init_exp]
       end
+      top[:datas].each do |data_def|
+        calc_allocs_exp(data_def[:exp])
+      end
+      type_tbl = top[:itypes].map{|x| [x[:type][:name][:desc], x]}.to_h
+      top[:itypes].each do |type_def|
+        calc_allocs_type(type_def, type_tbl)
+      end
+    end
+
+    def calc_allocs_type(type, type_tbl)
+      return {} unless type
+      return type[:allocs] if type.has_key?(:allocs)
+      res = {}
+      unless type[:static]
+        res[Link.new(type, type[:type][:name][:desc])] = 1
+      end
+      ch = type[:tvalues].inject({}) do |acc1, t|
+        x = t[:params].inject({}) do |acc2, p|
+          c = calc_allocs_type(type_tbl[p[:mono_typing].to_uniq_str], type_tbl)
+          add_merge(acc2, c)
+        end
+        select_merge(acc1, x)
+      end
+      type[:allocs] = add_merge(res, ch)
     end
 
     def calc_allocs_exp(exp)

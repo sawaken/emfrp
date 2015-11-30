@@ -40,7 +40,7 @@ module Emfrp
         many(ws),
         end_of_input.err("module-file", "valid end of file")
       ).map do |x|
-        t = Top.new(:inputs => x[:inputs], :outputs => x[:outputs], :uses => x[:uses])
+        t = Top.new(:inputs => x[:inputs], :outputs => x[:outputs], :uses => x[:uses], :module_name => x[:name])
         x[:defs].each do |d|
           k = case d
           when DataDef then :datas

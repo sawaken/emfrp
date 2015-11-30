@@ -8,9 +8,9 @@ module Emfrp
       end
       case syntax
       when Top
-        convert_into_monomorphic(top, syntax[:nodes])
-        convert_into_monomorphic(top, syntax[:inputs])
-        convert_into_monomorphic(top, syntax[:datas])
+        convert_into_monomorphic(top, syntax[:nodes], type_tbl, func_tbl)
+        convert_into_monomorphic(top, syntax[:inputs], type_tbl, func_tbl)
+        convert_into_monomorphic(top, syntax[:datas], type_tbl, func_tbl)
       when FuncCall
         f = syntax[:func].get
         key = [f[:name][:desc], syntax[:func_typing].to_uniq_str]
@@ -28,11 +28,12 @@ module Emfrp
           convert_into_monomorphic(top, new_f_instance, type_tbl, func_tbl)
         end
         convert_into_monomorphic(top, syntax.values, type_tbl, func_tbl)
-      when ValueConst
+      when ValueConst, ValuePattern
         mono_name = syntax[:typing].to_flatten_uniq_str
         t = top[:itypes].find{|x| x[:type][:name][:desc] == mono_name}
         raise "assertion error: undefined #{mono_name}" if t == nil
         syntax[:type] = Link.new(t, mono_name)
+        syntax[:name][:desc] += "_" + mono_name
         convert_into_monomorphic(top, syntax.values, type_tbl, func_tbl)
       when Syntax
         convert_into_monomorphic(top, syntax.values, type_tbl, func_tbl)
@@ -42,30 +43,32 @@ module Emfrp
     end
 
     def monofy(utype, top, type_tbl)
-      raise "assertion error" if utype.has_var?
+      raise "assertion error: #{utype.inspect}" if utype.has_var?
       if type_tbl[utype.to_uniq_str]
         return type_tbl[utype.to_uniq_str]
       end
       if top[:ptypes].find{|x| x[:name][:desc] == utype.typename}
         return utype
       end
-      utype.typeargs.each do |child_utype|
-        monofy(child_utype, top, type_tbl)
-      end
       if ["Func", "Case"].include?(utype.typename)
         return Typing::UnionType.new(utype.typename, utype.typeargs.map{|x| monofy(x, top, type_tbl)})
       end
+      type_tbl[utype.to_uniq_str] = Typing::UnionType.new(utype.to_flatten_uniq_str, [])
+      utype.typeargs.each do |child_utype|
+        monofy(child_utype, top, type_tbl)
+      end
+
       t = top[:types].find{|x| x[:type][:name][:desc] == utype.typename}
       raise "assertion error: undefined #{utype.to_uniq_str}" if t == nil
-      type_tbl[utype.to_uniq_str] = Typing::UnionType.new(utype.to_flatten_uniq_str, [])
+
       new_t_instance = copy_def(t)
       new_t_instance[:typing].unify(utype)
       new_t_instance[:tvalues].each do |tvalue|
         tvalue[:name][:desc] += "_" + utype.to_flatten_uniq_str
-        convert_into_monomorphic(top, tvalue, type_tbl)
       end
       new_t_instance[:type][:name][:desc] = utype.to_flatten_uniq_str
       top[:itypes] << new_t_instance
+      convert_into_monomorphic(top, new_t_instance, type_tbl)
       return type_tbl[utype.to_uniq_str]
     end
 

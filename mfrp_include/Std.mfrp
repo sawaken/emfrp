@@ -16,3 +16,6 @@ primfunc * (a : Int, b : Int) : Int = c{ a * b }, ruby{ a * b }
 primfunc - (a : Int, b : Int) : Int = c{ a - b }, ruby{ a - b }
 primfunc < (a : Int, b : Int) : Bool = c{ a < b }, ruby{ a < b ? [:True] : [:False] }
 primfunc @! (a : Bool) : Bool = c{ !a }, ruby{ a == [:True] ? [:False] : [:True] }
+
+infixl 7 *
+infixl 6 +

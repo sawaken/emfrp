@@ -1,0 +1,4 @@
+module Simple in x : Int, y : Int out z : Int use Std
+
+node node1(x, y) = (x * y, x + y)
+node z(node1) = node1 of (a, b) -> a + b

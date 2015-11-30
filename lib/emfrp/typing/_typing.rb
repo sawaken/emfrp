@@ -155,8 +155,7 @@ module Emfrp
         # make real-func-type
         return_type = UnionType.new
         arg_types = exp[:args].map{|e| typing_exp(ftype_tbl, vtype_tbl, e)}
-        real_func_type = UnionType.new("Func", arg_types + [return_type])
-        exp[:func_typing] = real_func_type
+        exp[:func_typing] = real_func_type = UnionType.new("Func", arg_types + [return_type])
         try_unify(real_func_type, expected_func_type, "function call `#{exp[:name][:desc]}`", exp)
         # return exp's utype
         return exp[:typing] = return_type
@@ -165,14 +164,14 @@ module Emfrp
         return_type = UnionType.new
         expected_case_type = UnionType.new("Case", [left_type, return_type])
         exp[:cases].each do |c|
-          case_pattern_type = typing_pattern(ftype_tbl, vtype_tbl, c, c[:pattern])
-          case_return_type = typing_exp(ftype_tbl, vtype_tbl, c[:exp])
-          c[:typing] = UnionType.new("Case",  [case_pattern_type, case_return_type])
-          try_unify(c[:typing], expected_case_type, "case", c)
-          try_unify(case_pattern_type, left_type, "left", c)
-          try_unify(case_return_type, return_type, "case", c)
+          real_case_type = typing_exp(ftype_tbl, vtype_tbl, c)
+          try_unify(real_case_type, expected_case_type, "case", c)
         end
         return exp[:typing] = return_type
+      when Case
+        pattern_type = typing_pattern(ftype_tbl, vtype_tbl, exp, exp[:pattern])
+        return_type = typing_exp(ftype_tbl, vtype_tbl, exp[:exp])
+        return exp[:typing] = UnionType.new("Case",  [pattern_type, return_type])
       when LiteralIntegral
         return exp[:typing] = UnionType.new("Int", [])
       when LiteralFloating

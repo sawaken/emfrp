@@ -40,6 +40,7 @@ module Emfrp
         elsif args.length == 0
           @union = [self]
           @name_id = NameCounter.shift
+          @original_name_id = @name_id
         else
           raise "Wrong number of arguments (#{args.length} for 0, 2)"
         end
@@ -82,11 +83,18 @@ module Emfrp
       end
 
       def unite(a, b)
-        new_union = (a.union + b.union).uniq
+        new_union = (a.collect_union + b.collect_union).uniq
         substitute_id = new_union.map{|t| t.name_id}.min
         new_union.each{|t| t.name_id = substitute_id}
         a.union = new_union
         b.union = new_union
+      end
+
+      def collect_union(visited={})
+        return [] if visited[self]
+        visited[self] = true
+        res = @union + @union.map{|t| t.collect_union(visited)}.flatten
+        return res.uniq
       end
 
       def typevars
@@ -125,12 +133,12 @@ module Emfrp
             raise UnifyError.new(nil, nil)
           end
         elsif !self.var? && other.var?
-          other.union.each do |t|
+          other.collect_union.each do |t|
             self.occur_check(t)
             t.transform(self)
           end
         elsif self.var? && !other.var?
-          self.union.each do |t|
+          self.collect_union.each do |t|
             other.occur_check(t)
             t.transform(other)
           end
@@ -176,7 +184,7 @@ module Emfrp
 
       def inspect
         if self.var?
-          "a#{self.name_id}" + (@original_typevar_name ? "(#{@original_typevar_name})" : "")
+          "a#{self.name_id}[#{@original_name_id}]" + (@original_typevar_name ? "(#{@original_typevar_name})" : "")
         else
           args = self.typeargs.size > 0 ? "[#{self.typeargs.map{|t| t.inspect}.join(", ")}]" : ""
           "#{self.typename}#{args}"

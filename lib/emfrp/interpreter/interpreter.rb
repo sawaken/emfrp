@@ -75,8 +75,10 @@ module Emfrp
           puts "Error: undefined data `#{line}`"
         end
       when "ast-t"
-        if type_def = (@top[:types] + @top[:ptypes]).find{|x| x[:type][:name][:desc] == line}
-          pp type_def
+        type_def = @top[:types].find{|x| x[:type][:name][:desc] == line}
+        ptype_def = @top[:ptypes].find{|x| x[:name][:desc] == line}
+        if type_def || ptype_def
+          pp type_def || ptype_def
         else
           puts "Error: undefined type `#{line}`"
         end
@@ -97,6 +99,10 @@ module Emfrp
         pp @top[:ifuncs]
       when "ast-itypes"
         pp @top[:itypes]
+      when "enable-convert"
+        @enable_convert = true
+        add_line("")
+        puts "ok."
       else
         puts "Error undefined command `#{com}`"
       end
@@ -166,7 +172,7 @@ module Emfrp
       top = Parser.parse_src(src_str, file_name, file_loader, Parser.material_file, main_top)
       PreCheck.check(top)
       Typing.typing(top)
-      Convert.convert(top)
+      Convert.convert(top) if @enable_convert
       return top
     rescue Parser::ParsingError => err
       err.print_error(@output_io)
