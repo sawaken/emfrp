@@ -14,11 +14,7 @@ while true
   if input == nil
     inter.end_of_input()
     break
-  elsif Emfrp::Parser.exp?(input, "command-line")
-    inter.eval_line(input)
-  elsif input =~ /^\s*\:([a-z\-]+)\s*(.*)$/
-    inter.command($1, $2)
   else
-    inter.add_line(input)
+    inter.process_command(input)
   end
 end

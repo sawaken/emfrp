@@ -109,6 +109,7 @@ module Emfrp
       :pfuncs,
       :itypes,
       :ifuncs,
+      :commands,
     ]
     def initialize(*tops)
       ATTRS.each do |a|
@@ -123,7 +124,7 @@ module Emfrp
 
   Types = [
     :InputDef, :OutputDef, :DataDef, :FuncDef, :NodeDef, :TypeDef, :InfixDef,
-    :PrimTypeDef, :PrimFuncDef,
+    :PrimTypeDef, :PrimFuncDef, :CommandDef,
 
     :ParamDef, :Type, :TypeVar, :TValue, :TValueParam, :NodeConst, :ForeignExp,
 

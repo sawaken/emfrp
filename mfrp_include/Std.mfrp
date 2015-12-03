@@ -2,20 +2,57 @@ material Std
 
 type Maybe[a] = Just(a) | Nothing
 
+# Tuple
+# --------------------
+#@ :assert-equal 1, (1,2).fst
+#@ :assert-equal 2, (1,2).snd
+
 type Tuple2[t0, t1] = Tuple2(t0, t1)
 type Tuple3[t0, t1, t2] = Tuple3(t0, t1, t2)
 type Tuple4[t0, t1, t2, t3] = Tuple4(t0, t1, t2, t3)
 type Tuple5[t0, t1, t2, t3, t4] = Tuple5(t0, t1, t2, t3, t4)
 
-type static Bool = False | True
+func fst (t : Tuple2[a, b]) : a = t of Tuple2(x, y) -> x
+func snd (t : Tuple2[a, b]) : b = t of Tuple2(x, y) -> y
+
+
+# Arithmetic Operations
+# --------------------
+#@ :assert-equal 11, 1+2*3+4
+#@ :assert-equal -4, 1-2-3
 
 primtype Int = c{ int }
+
+infixl 7 *
+infixl 7 /
+infixl 6 +
+infixl 6 -
 
 primfunc + (a : Int, b : Int) : Int = c{ a + b }, ruby{ a + b }
 primfunc * (a : Int, b : Int) : Int = c{ a * b }, ruby{ a * b }
 primfunc - (a : Int, b : Int) : Int = c{ a - b }, ruby{ a - b }
 primfunc < (a : Int, b : Int) : Bool = c{ a < b }, ruby{ a < b ? [:True] : [:False] }
-primfunc @! (a : Bool) : Bool = c{ !a }, ruby{ a == [:True] ? [:False] : [:True] }
+primfunc @- (a : Int) : Int = c{ -a }, ruby{ -a }
 
-infixl 7 *
-infixl 6 +
+
+# Boolean Operations
+# --------------------
+#@ :assert-equal True, !False
+#@ :assert-equal False, !True
+#@ :assert-equal True, True && True
+#@ :assert-equal False, True && False
+#@ :assert-equal False, False && True
+#@ :assert-equal False, False && False
+#@ :assert-equal True, True || True
+#@ :assert-equal True, True || False
+#@ :assert-equal True, False || True
+#@ :assert-equal False, False || False
+
+type static Bool = False | True
+
+infixr 3 &&
+infixl 2 ||
+
+primfunc && (a : Bool, b : Bool) : Bool = c{ a && b }, ruby{ a == [:True] && b == [:True] ? [:True] : [:False] }
+primfunc || (a : Bool, b : Bool) : Bool = c{ a || b }, ruby{ a == [:True] || b == [:True] ? [:True] : [:False] }
+primfunc @! (a : Bool) : Bool = c{ !a }, ruby{ a == [:True] ? [:False] : [:True] }

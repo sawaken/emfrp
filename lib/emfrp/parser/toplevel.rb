@@ -7,36 +7,36 @@ module Emfrp
     # --------------------
 
     parser :module_top_def do
-      data_def ^ func_def ^ node_def ^ type_def ^ infix_def ^ primtype_def ^ primfunc_def
+      data_def ^ func_def ^ node_def ^ type_def ^ infix_def ^ primtype_def ^ primfunc_def ^ command_def
     end
 
     parser :material_top_def do
-      data_def ^ func_def ^ type_def ^ infix_def ^ primtype_def ^ primfunc_def
+      data_def ^ func_def ^ type_def ^ infix_def ^ primtype_def ^ primfunc_def ^ command_def
     end
 
     parser :module_file do
+      place = "module-file"
       seq(
         many(ws),
-        symbol("module").err("module-file", "keyword 'module'").name(:keyword1),
-        many1(ws),
+        symbol("module").err(place, "keyword `module'").name(:keyword1),
+        many1(ws).err(place, "space after `module' keyword"),
         ident_begin_upper.name(:name),
-        many1(ws),
-        symbol("in"),
-        many1(ws),
-        many1_fail(input_def, comma_separator).name(:inputs),
-        many1(ws),
-        symbol("out"),
-        many1(ws),
-        many1_fail(output_def, comma_separator).name(:outputs),
+        many1(ws).err(place, "space after module name"),
+        symbol("in").err(place, "keyword `in'"),
+        many1(ws).err(place, "space after `in' keyword"),
+        many1_fail(input_def, comma_separator).err(place, "definitions of inputs").name(:inputs),
+        many1(ws).err(place, "spaec after definitions of input"),
+        symbol("out").err(place, "keyword `out'"),
+        many1(ws).err(place, "space after keyword `out'"),
+        many1_fail(output_def, comma_separator).err(place, "definitions of outputs").name(:outputs),
         opt_fail(
           many1(ws) >
           symbol("use") >
-          many1(ws) >
-          many1_fail(load_path, comma_separator) <
-          many1(ws)
+          many1(ws).err(place, "space after keyword `use'") >
+          many1_fail(load_path, comma_separator).err(place, "definitions of include-files")
         ).map{|x| x == [] ? [] : x[0]}.name(:uses),
-        many(ws),
-        many_fail(module_top_def, many(ws)).name(:defs),
+        many1(ws).err(place, "space before top-definitions"),
+        many_fail(module_top_def, many(ws)).err(place, "top definitions").name(:defs),
         many(ws),
         end_of_input.err("module-file", "valid end of file")
       ).map do |x|
@@ -50,6 +50,7 @@ module Emfrp
           when InfixDef then :infixes
           when PrimTypeDef then :ptypes
           when PrimFuncDef then :pfuncs
+          when CommandDef then :commands
           end
           t[k] << d
         end
@@ -58,19 +59,19 @@ module Emfrp
     end
 
     parser :material_file do
+      place = "material-file"
       seq(
         many(ws),
-        symbol("material").err("material-file", "keyword 'material'").name(:keyword1),
+        symbol("material").err("material-file", "keyword `material'").name(:keyword1),
         many1(ws),
         ident_begin_upper.name(:name),
         opt_fail(
           many1(ws) >
           symbol("use") >
           many1(ws) >
-          many1_fail(load_path, comma_separator) <
-          many1(ws),
+          many1_fail(load_path, comma_separator)
         ).to_nil.name(:uses),
-        many(ws),
+        many1(ws),
         many_fail(material_top_def, many(ws)).name(:defs),
         many(ws),
         end_of_input.err("module", "valid end of file")
@@ -84,6 +85,7 @@ module Emfrp
           when InfixDef then :infixes
           when PrimTypeDef then :ptypes
           when PrimFuncDef then :pfuncs
+          when CommandDef then :commands
           end
           t[k] << d
         end
@@ -262,6 +264,20 @@ module Emfrp
         end_of_def.err("primfunc-def", "valid end of primfunc-def")
       ).map do |x|
         PrimFuncDef.new(x.to_h)
+      end
+    end
+
+    parser :command_def do
+      seq(
+        symbol("#@").name(:keyword1),
+        many(non_newline).name(:command),
+        symbol("\n").name(:keyword2)
+      ).map do |x|
+        CommandDef.new(
+          :keyword1 => x[:keyword1],
+          :command_str => x[:command].map(&:item).join,
+          :keyword2 => x[:keyword2]
+        )
       end
     end
 

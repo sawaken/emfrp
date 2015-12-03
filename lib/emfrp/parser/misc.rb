@@ -38,7 +38,13 @@ module Emfrp
     end
 
     parser :commentout do # -> ()
-      char("#") > many(non_newline)
+      char("#") > many(non_newline) >> proc{|x|
+        if x.size == 0 || x[0].item != "@"
+          ok(nil)
+        else
+          fail
+        end
+      }
     end
 
     parser :newline do #-> ()

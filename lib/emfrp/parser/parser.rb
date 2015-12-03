@@ -37,16 +37,27 @@ module Emfrp
     end
 
     def self.exp?(src_str, file_name)
-      exp_input = many(ws) > exp < many(ws) < end_of_input
+      res = exps?(src_str, file_name)
+      if res && res.size == 1
+        res.first
+      else
+        false
+      end
+    end
+
+    def self.exps?(src_str, file_name)
+      exp_input = many(ws) > many1(exp, comma_separator) < many(ws) < end_of_input
       case res = exp_input.parse_from_string(convert_case_group(src_str), file_name)
       when Fail
         false
       when Ok
-        true
+        res.parsed
       else
         raise "unexpected return of parser (bug)"
       end
     end
+
+
 
     def self.convert_case_group(src_str)
       raise ParsingError.new("TAB is not allowed to use in sources.") if src_str.chars.include?("\t")

@@ -13,7 +13,6 @@ module Emfrp
       @include_dirs = include_dirs
       @output_io = output_io
       @inputs = []
-      @read_nums = (1..1000).to_a
       begin
         @file_loader = FileLoader.new(@include_dirs)
         @main_module_top = Parser.parse_input(main_path, @file_loader, Parser.module_file)
@@ -33,6 +32,7 @@ module Emfrp
     end
 
     def read_num
+      @read_nums ||= (1..1000).to_a
       "%03d" % @read_nums.shift
     end
 
@@ -40,7 +40,17 @@ module Emfrp
       puts ""
     end
 
-    def add_line(line)
+    def process_command(command_str) # -> true(ok) / false(fail)
+      if Parser.exp?(command_str, "command-line")
+        eval_line(command_str)
+      elsif command_str =~ /^\s*\:([a-z\-]+)\s*(.*)$/
+        command($1, $2)
+      else
+        add_line(command_str)
+      end
+    end
+
+    def add_line(line) # -> true(ok) / false(fail)
       @inputs << line
       process_inputs()
       return true
@@ -49,7 +59,7 @@ module Emfrp
       return false
     end
 
-    def command(com, line)
+    def command(com, line) # -> true(ok) / false(fail)
       process_inputs() unless @top
       case com
       when "type-f", "ast-f"
@@ -103,18 +113,42 @@ module Emfrp
         @enable_convert = true
         add_line("")
         puts "ok."
+      when "assert-equal"
+        res = Parser.exps?(line + "\n", "command-line")
+        if res && res.size == 2 && evaluated = eval_exp_str("(#{line})")
+          v1, v2 = evaluated[0][1], evaluated[0][2]
+          if v1 != v2
+            puts "Expected: #{value_to_s(v1)}"
+            puts "Real: #{value_to_s(v2)}"
+            return false
+          end
+        else
+          puts "Error: invalid argument for assert-equal"
+        end
       else
         puts "Error undefined command `#{com}`"
       end
+      return true
     end
 
-    def eval_line(line)
-      name = "evaldata%03d" % (@read_nums.first - 1)
-      if add_line("data #{name} = #{line}")
-        exp = @top[:datas].find{|x| x[:name][:desc] ==name}[:exp]
-        val = eval_exp(exp)
-        puts "#{value_to_s(val)} : #{exp[:typing].to_uniq_str}"
+    def eval_line(line) # -> true(ok) / false(fail)
+      if res = eval_exp_str(line)
+        v, e = *res
+        puts "#{value_to_s(v)} : #{e[:typing].to_uniq_str}"
+        return true
+      else
+        return false
       end
+    end
+
+    def eval_exp_str(exp_str)
+      @evaldata_serial ||= (0..1000).to_a
+      name = "evaldata%03d" % @evaldata_serial.shift
+      if add_line("data #{name} = #{exp_str}")
+        exp = @top[:datas].find{|x| x[:name][:desc] == name}[:exp]
+        return [eval_exp(exp), exp]
+      end
+      return false
     end
 
     def value_to_s(val)
@@ -156,15 +190,51 @@ module Emfrp
           env[key] = eval_exp(exp[:binder].get[:exp], env)
         end
         env[key]
+      when MatchExp
+        left_val = eval_exp(exp[:exp], env)
+        exp[:cases].each do |c|
+          if match_result = pattern_match(c, left_val)
+            return eval_exp(c[:exp], env.merge(match_result))
+          end
+        end
+        raise "pattern match fail"
       else
         raise "Unexpected expression type #{exp.class} (bug)"
       end
+    end
+
+    def pattern_match(c, v, pattern=c[:pattern], vars={})
+      if pattern[:ref]
+        key = [pattern[:ref], Link.new(c)]
+        vars[key] = v
+      end
+      case pattern
+      when ValuePattern
+        if v.is_a?(Array) && pattern[:name][:desc].to_sym == v[0]
+          res = v.drop(1).zip(pattern[:args]).all? do |ch_v, ch_p|
+            pattern_match(c, ch_v, ch_p, vars)
+          end
+          return vars if res
+        end
+      when IntegralPattern
+        if v.is_a?(Integer) && pattern[:val][:entity][:desc].to_i == v
+          return vars
+        end
+      when AnyPattern
+        return vars
+      end
+      return nil
     end
 
     def process_inputs
       main_top = @main_module_top || @main_material_top
       src_str = (["material REPL"] + @inputs).join("\n")
       @top = parse_commandline_inputs(src_str, "command-line", @file_loader, main_top)
+      unless @at_first
+        @at_first = true
+        ress = @top[:commands].reject{|com| process_command(com[:command_str])}
+        puts "#{ress.size} erros occurred." if ress.size > 0
+      end
     end
 
     def parse_commandline_inputs(src_str, file_name, file_loader, main_top)
