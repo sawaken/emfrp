@@ -2,7 +2,7 @@ require 'pp'
 require 'emfrp/file_loader'
 require "emfrp/parser/parser"
 require 'emfrp/pre_check/pre_check'
-require 'emfrp/typing/typing'
+require 'emfrp/typing/typing2'
 require 'emfrp/convert/convert'
 require 'emfrp/compile_error'
 require 'emfrp/interpreter/evaluater'
@@ -22,7 +22,7 @@ module Emfrp
       @infix_parser = Parser.from_infixes_to_parser(@top[:infixes])
       Parser.infix_convert(@top, @infix_parser)
       PreCheck.check(@top)
-      Typing.typing(@top)
+      Typing2.typing(@top)
     rescue Parser::ParsingError => err
       err.print_error(@output_io)
       raise InterpreterError.new
@@ -41,7 +41,7 @@ module Emfrp
       d = Parser.parse(def_str, file_name, Parser.oneline_file)
       Parser.infix_convert(d, @infix_parser)
       PreCheck.additional_check(@top, d)
-      Typing.additional_typing(@top, d)
+      Typing2.typing(@top, d)
       @top.add(d)
       return true
     rescue Parser::ParsingError => err
