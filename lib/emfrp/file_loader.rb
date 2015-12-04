@@ -9,6 +9,11 @@ module Emfrp
       @loaded_hash.has_key?(path)
     end
 
+    def loaded_full_path(path)
+      raise "assertion error" unless loaded?(path)
+      @loaded_hash[path][1]
+    end
+
     def get_src_from_full_path(required_full_path)
       @loaded_hash.each do |path, x|
         src_str, full_path = *x

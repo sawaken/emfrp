@@ -111,6 +111,7 @@ module Emfrp
       :ifuncs,
       :commands,
     ]
+
     def initialize(*tops)
       ATTRS.each do |a|
         self[a] = []
@@ -119,6 +120,15 @@ module Emfrp
         end
       end
       self[:module_name] = tops.map{|x| x[:module_name]}.find{|x| x}
+    end
+
+    def add(d)
+      case d
+      when DataDef then self[:datas] << d
+      when FuncDef then self[:funcs] << d
+      when TypeDef then self[:types] << d
+      else raise "assertion error: unsupported Def-type"
+      end
     end
   end
 

@@ -14,11 +14,19 @@ module Emfrp
       data_def ^ func_def ^ type_def ^ infix_def ^ primtype_def ^ primfunc_def ^ command_def
     end
 
+    parser :appendable_top_def do
+      data_def ^ func_def ^ type_def
+    end
+
+    parser :module_or_material_file do
+      (module_file ^ material_file).err("file", "module-file or material_file")
+    end
+
     parser :module_file do
       place = "module-file"
       seq(
         many(ws),
-        symbol("module").err(place, "keyword `module'").name(:keyword1),
+        symbol("module").name(:keyword1),
         many1(ws).err(place, "space after `module' keyword"),
         ident_begin_upper.name(:name),
         many1(ws).err(place, "space after module name"),
@@ -62,7 +70,7 @@ module Emfrp
       place = "material-file"
       seq(
         many(ws),
-        symbol("material").err("material-file", "keyword `material'").name(:keyword1),
+        symbol("material").name(:keyword1),
         many1(ws),
         ident_begin_upper.name(:name),
         opt_fail(
@@ -76,7 +84,7 @@ module Emfrp
         many(ws),
         end_of_input.err("module", "valid end of file")
       ).map do |x|
-        t = Top.new(:uses => x[:uses])
+        t = Top.new(:uses => x[:uses], :module_name => nil)
         x[:defs].each do |d|
           k = case d
           when DataDef then :datas
@@ -91,6 +99,10 @@ module Emfrp
         end
         t
       end
+    end
+
+    parser :oneline_file do
+      many(ws) > appendable_top_def < many(ws) < end_of_input
     end
 
     parser :load_path do
@@ -213,7 +225,7 @@ module Emfrp
         many1_fail(tvalue_def, or_separator).err("type-def", "value constructors").name(:tvalues),
         end_of_def.err("type-def", "valid end of type-def")
       ).map do |x|
-        TypeDef.new(x.to_h)
+        TypeDef.new(x.to_h, :name => x[:type][:name])
       end
     end
 
@@ -271,12 +283,14 @@ module Emfrp
       seq(
         symbol("#@").name(:keyword1),
         many(non_newline).name(:command),
-        symbol("\n").name(:keyword2)
+        char("\n"),
+        many(str("#-") > many(non_newline) < char("\n")).name(:following_lines)
       ).map do |x|
+        lines = [x[:command]] + x[:following_lines]
         CommandDef.new(
-          :keyword1 => x[:keyword1],
-          :command_str => x[:command].map(&:item).join,
-          :keyword2 => x[:keyword2]
+          :line_number =>  x[:keyword1][:start_pos][:line_number],
+          :file_name =>  x[:keyword1][:start_pos][:document_name],
+          :command_str => lines.map{|line| line.map(&:item).join}.join(" ")
         )
       end
     end

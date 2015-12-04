@@ -4,11 +4,6 @@ module Emfrp
     def associate_var(syntax, binders=[])
       case syntax
       when Top
-        check_duplicate_name((syntax[:inputs] + syntax[:nodes]).map{|x| x[:name]})
-        check_duplicate_name(syntax[:datas].map{|x| x[:name]})
-        check_duplicate_name((syntax[:funcs] + syntax[:pfuncs]).map{|x| x[:name]})
-        check_duplicate_name(syntax[:types].map{|x| x[:type][:name]} + syntax[:ptypes].map{|x| x[:name]})
-        check_duplicate_name(syntax[:types].map{|x| x[:tvalues].map{|x| x[:name]}}.flatten)
         syntax[:datas].each do |data_def|
           data_def[:binds] = [data_def[:name]]
         end
@@ -59,7 +54,7 @@ module Emfrp
       names.each do |name|
         dups = names.select{|x| x == name}
         if dups.size > 1
-          err("Duplicate names `#{name[:desc]}`:\n", *dups)
+          err("Duplicate names `#{name[:desc]}':\n", *dups)
         end
       end
     end

@@ -1,20 +1,21 @@
 #!/usr/bin/env ruby
 $LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
-$LOAD_PATH.unshift File.dirname(__FILE__) + "/../../parser_combinator/lib"
+
 require 'emfrp'
-require 'emfrp/interpreter/interpreter'
 require 'readline'
 
-current_dir = Dir.pwd + "/"
-stdlib_dir = File.dirname(__FILE__) + "/../mfrp_include/"
-
-inter = Emfrp::Interpreter.new([current_dir, stdlib_dir], STDOUT, ARGV[0] || "Std")
-while true
-  input = Readline.readline("mfrpi:#{inter.read_num}> ", true)
-  if input == nil
-    inter.end_of_input()
-    break
-  else
-    inter.process_command(input)
+begin
+  inter = Emfrp::Interpreter.new(Emfrp::IncludeDirs, STDOUT, ARGV[0] || "Std")
+  Readline.completion_proc = inter.completion_proc
+  while true
+    input = Readline.readline("mfrpi:#{inter.current_readline_id}> ", true)
+    if input == nil
+      inter.close()
+      exit(0)
+    else
+      inter.process_repl_line(input)
+    end
   end
+rescue Emfrp::InterpreterError
+  exit(1)
 end

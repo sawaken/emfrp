@@ -1,25 +1,31 @@
 material Std
 
 type Maybe[a] = Just(a) | Nothing
+type static Opt[a] = Some(a) | None
 
 # Tuple
 # --------------------
-#@ :assert-equal 1, (1,2).fst
-#@ :assert-equal 2, (1,2).snd
+#@ :assert-equals 1, (1,2).fst
+#@ :assert-equals 2, (1,2).snd
 
 type Tuple2[t0, t1] = Tuple2(t0, t1)
 type Tuple3[t0, t1, t2] = Tuple3(t0, t1, t2)
 type Tuple4[t0, t1, t2, t3] = Tuple4(t0, t1, t2, t3)
 type Tuple5[t0, t1, t2, t3, t4] = Tuple5(t0, t1, t2, t3, t4)
 
+#@ :set-func-doc
+#- fst("Tuple2") = "first element of Tuple2"
 func fst (t : Tuple2[a, b]) : a = t of Tuple2(x, y) -> x
+
+#@ :set-func-doc
+#- snd("Tuple2") = "second element of Tuple2"
 func snd (t : Tuple2[a, b]) : b = t of Tuple2(x, y) -> y
 
 
 # Arithmetic Operations
 # --------------------
-#@ :assert-equal 11, 1+2*3+4
-#@ :assert-equal -4, 1-2-3
+#@ :assert-equals 11, 1+2*3+4
+#@ :assert-equals -4, 1-2-3
 
 primtype Int = c{ int }
 
@@ -29,29 +35,36 @@ infixl 6 +
 infixl 6 -
 
 primfunc + (a : Int, b : Int) : Int = c{ a + b }, ruby{ a + b }
-primfunc * (a : Int, b : Int) : Int = c{ a * b }, ruby{ a * b }
 primfunc - (a : Int, b : Int) : Int = c{ a - b }, ruby{ a - b }
+primfunc * (a : Int, b : Int) : Int = c{ a * b }, ruby{ a * b }
+primfunc / (a : Int, b : Int) : Int = c{ a / b }, ruby{ a / b }
 primfunc < (a : Int, b : Int) : Bool = c{ a < b }, ruby{ a < b ? [:True] : [:False] }
+primfunc > (a : Int, b : Int) : Bool = c{ a > b }, ruby{ a > b ? [:True] : [:False] }
+primfunc <= (a : Int, b : Int) : Bool = c{ a <= b }, ruby{ a <= b ? [:True] : [:False] }
+primfunc >= (a : Int, b : Int) : Bool = c{ a >= b }, ruby{ a >= b ? [:True] : [:False] }
+primfunc == (a : Int, b : Int) : Bool = c{ a == b }, ruby{ a == b ? [:True] : [:False] }
+primfunc != (a : Int, b : Int) : Bool = c{ a != b }, ruby{ a != b ? [:True] : [:False] }
 primfunc @- (a : Int) : Int = c{ -a }, ruby{ -a }
+primfunc @+ (a : Int) : Int = c{ +a }, ruby{ +a }
 
 
 # Boolean Operations
 # --------------------
-#@ :assert-equal True, !False
-#@ :assert-equal False, !True
-#@ :assert-equal True, True && True
-#@ :assert-equal False, True && False
-#@ :assert-equal False, False && True
-#@ :assert-equal False, False && False
-#@ :assert-equal True, True || True
-#@ :assert-equal True, True || False
-#@ :assert-equal True, False || True
-#@ :assert-equal False, False || False
+#@ :assert-equals True, !False
+#@ :assert-equals False, !True
+#@ :assert-equals True, True && True
+#@ :assert-equals False, True && False
+#@ :assert-equals False, False && True
+#@ :assert-equals False, False && False
+#@ :assert-equals True, True || True
+#@ :assert-equals True, True || False
+#@ :assert-equals True, False || True
+#@ :assert-equals False, False || False
 
 type static Bool = False | True
 
 infixr 3 &&
-infixl 2 ||
+infixr 2 ||
 
 primfunc && (a : Bool, b : Bool) : Bool = c{ a && b }, ruby{ a == [:True] && b == [:True] ? [:True] : [:False] }
 primfunc || (a : Bool, b : Bool) : Bool = c{ a || b }, ruby{ a == [:True] || b == [:True] ? [:True] : [:False] }

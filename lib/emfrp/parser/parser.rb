@@ -9,15 +9,15 @@ require 'emfrp/parser/parsing_error'
 
 module Emfrp
   class Parser < ParserCombinator::StringParser
-    def self.parse_input(path, file_loader, file_type=module_file, parental_top=nil)
+    def self.parse_input(path, file_loader, file_type=module_file)
       if file_loader.loaded?(path)
         return Top.new
       end
       src_str, file_name = file_loader.load(path)
-      parse_src(src_str, file_name, file_loader, file_type, parental_top)
+      parse_src(src_str, file_name, file_loader, file_type)
     end
 
-    def self.parse_src(src_str, file_name, file_loader, file_type=module_file, parental_top=nil)
+    def self.parse_src(src_str, file_name, file_loader, file_type=module_file)
       case res = file_type.parse_from_string(convert_case_group(src_str), file_name)
       when Fail
         raise ParsingError.new(src_str, file_name, res.status)
@@ -25,39 +25,22 @@ module Emfrp
         tops = res.parsed[:uses].map do |use_path|
           parse_input(use_path.map{|x| x[:desc]}, file_loader, material_file)
         end
-        top = Top.new(*tops, res.parsed)
-        if parental_top == nil
-          return infix_rearrange(top)
-        else
-          return infix_rearrange(Top.new(top, parental_top))
-        end
+        return Top.new(*tops, res.parsed)
       else
         raise "unexpected return of parser (bug)"
       end
     end
 
-    def self.exp?(src_str, file_name)
-      res = exps?(src_str, file_name)
-      if res && res.size == 1
-        res.first
-      else
-        false
-      end
-    end
-
-    def self.exps?(src_str, file_name)
-      exp_input = many(ws) > many1(exp, comma_separator) < many(ws) < end_of_input
-      case res = exp_input.parse_from_string(convert_case_group(src_str), file_name)
+    def self.parse(src_str, file_name, parser)
+      case res = parser.parse_from_string(convert_case_group(src_str), file_name)
       when Fail
-        false
+        raise ParsingError.new(src_str, file_name, res.status)
       when Ok
-        res.parsed
+        return res.parsed
       else
         raise "unexpected return of parser (bug)"
       end
     end
-
-
 
     def self.convert_case_group(src_str)
       raise ParsingError.new("TAB is not allowed to use in sources.") if src_str.chars.include?("\t")
@@ -83,12 +66,12 @@ module Emfrp
       lines.map{|l| l + "\n"}.join
     end
 
-    def self.infix_rearrange(top)
+    def self.from_infixes_to_parser(infixes)
       priority_listl = [[], [], [], [], [], [], [], [], [], []]
       priority_listr = [[], [], [], [], [], [], [], [], [], []]
       priority_listn = [[], [], [], [], [], [], [], [], [], []]
       defined_op = {}
-      top[:infixes].reverse.each do |id|
+      infixes.reverse.each do |id|
         if defined_op[id[:op][:desc]]
           next
         else
@@ -122,11 +105,17 @@ module Emfrp
           priority_list << {:op => priority_listn[i].inject(&:|), :dir => "left"}
         end
       end
-      return infix_convert(top, OpParser.make_op_parser(priority_list))
+      return OpParser.make_op_parser(priority_list)
+    end
+
+    def self.infix_rearrange(top)
+      infix_parser = from_infixes_to_parser(top[:infixes])
+      return infix_convert(top, infix_parser)
     end
 
     def self.infix_convert(s, parser)
-      if s.is_a?(Syntax)
+      case s
+      when Syntax
         new_s = s.class.new(s.map{|k, v| [k, infix_convert(v, parser)]}.to_h)
         if s.is_a?(OperatorSeq)
           items = Items.new(new_s[:seq].map{|c| Item.new(c, nil)})
@@ -138,7 +127,7 @@ module Emfrp
         else
           new_s
         end
-      elsif s.is_a?(Array)
+      when Array
         s.map{|c| infix_convert(c, parser)}
       else
         s

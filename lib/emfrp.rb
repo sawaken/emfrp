@@ -8,8 +8,11 @@ require 'emfrp/codegen/c/codegen'
 require 'emfrp/compile_error'
 require 'emfrp/file_loader'
 require 'emfrp/convert/convert'
+require 'emfrp/interpreter/interpreter'
 
 module Emfrp
+  IncludeDirs = [Dir.pwd + "/", File.dirname(__FILE__) + "/../mfrp_include/"]
+  
   def self.main(main_src_path, file_loader, c_output, h_output)
     begin
       top = Parser.parse_input(main_src_path, file_loader)
