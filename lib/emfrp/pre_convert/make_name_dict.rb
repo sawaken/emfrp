@@ -9,7 +9,6 @@ module Emfrp
         :type_space => {},
         :data_space => {},
         :const_space => {},
-        :var_space => {}
       }
       (top[:inputs] + top[:nodes]).each{|x| set_dict(top[:dict], x)}
       (top[:funcs] + top[:pfuncs]).each{|x| set_dict(top[:dict], x)}
@@ -31,13 +30,20 @@ module Emfrp
           PreCheck.err("Duplicate func/pfunc name `#{name}':\n", dict[:func_space][name].get, definition)
         else
           dict[:func_space][name] = Link.new(definition)
+          if definition.is_a?(FuncDef)
+          end
         end
       when TypeDef, PrimTypeDef
         if dict[:type_space][name]
           PreCheck.err("Duplicate type/ptype name `#{name}':\n", dict[:type_space][name].get, definition)
         else
           dict[:type_space][name] = Link.new(definition)
-          definition[:tvalues].each{|x| set_dict(dict, x)} if definition.is_a?(TypeDef)
+          if definition.is_a?(TypeDef)
+            definition[:tvalues].each do |x|
+              x[:type_def] = Link.new(definition)
+              set_dict(dict, x)
+            end
+          end
         end
       when DataDef
         if dict[:data_space][name]
@@ -51,6 +57,27 @@ module Emfrp
         else
           dict[:const_space][name] = Link.new(definition)
         end
+      else
+        raise "Assertion PreCheck.error: unexpected definition-type #{definition.class}"
+      end
+    end
+
+    # remove definition from dict.
+    # definition should not be depended by others
+    def remove_dict(dict, definition)
+      name = definition[:name][:desc]
+      case definition
+      when FuncDef
+        dict[:func_space].delete(name) if dict[:func_space][name] && dict[:func_space][name].get == definition
+      when TypeDef
+        dict[:type_space].delete(name) if dict[:type_space][name] && dict[:type_space][name].get == definition
+        definition[:tvalues].each do |x|
+          remove_dict(dict, x)
+        end
+      when DataDef
+        dict[:data_space].delete(name) if dict[:data_space][name] && dict[:data_space][name].get == definition
+      when TValue
+        dict[:const_space].delete(name) if dict[:const_space][name] && dict[:const_space][name].get == definition
       else
         raise "Assertion PreCheck.error: unexpected definition-type #{definition.class}"
       end

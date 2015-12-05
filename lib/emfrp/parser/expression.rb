@@ -38,7 +38,7 @@ module Emfrp
     end
 
     parser :builtin_operation do
-      x = match_with_group_case_op ^ match_with_single_case_op
+      x = match_with_indent_case_group_op ^ match_with_liner_case_group_op
       seq(
         operator_exp.name(:exp),
         many_fail(many1(ws) > x).name(:builtin_ops)
@@ -49,7 +49,7 @@ module Emfrp
       end
     end
 
-    parser :match_with_group_case_op do
+    parser :match_with_indent_case_group_op do
       seq(
         str("of:"),
         many(ws),
@@ -59,18 +59,22 @@ module Emfrp
       end
     end
 
-    parser :match_with_single_case_op do
+    parser :match_with_liner_case_group_op do
       seq(
         str("of"),
         many1(ws),
-        pattern.err("match-exp", "invalid single-case").name(:pattern),
-        many1(ws),
-        str("->"),
-        many1(ws),
-        exp.err("match-exp", "invalid exp").name(:exp)
+        many1_fail(
+          seq(
+            pattern.name(:pattern).name(:pattern),
+            many1(ws),
+            str("->").err("lienr-match-exp", "->"),
+            many1(ws),
+            exp.err("liner-match-exp", "invalid exp").name(:exp)
+          ).map{|x| Case.new(x.to_h)},
+          comma_separator
+        ).name(:cases)
       ).map do |x|
-        c = Case.new(:pattern => x[:pattern], :exp => x[:exp])
-        proc{|e| MatchExp.new(:cases => [c], :exp => e)}
+        proc{|e| MatchExp.new(x.to_h, :exp => e)}
       end
     end
 
@@ -358,7 +362,11 @@ module Emfrp
         many1(digit).name(:suffix)
       ).map do |x|
         sym = SSymbol.new(:desc => x[:prefix][:entity][:desc] + "." + x[:suffix].map(&:item).join)
-        LiteralFloating.new(:entity => sym)
+        LiteralFloating.new(
+          :entity => sym,
+          :start_pos => x[:prefix][:entity][:start_pos],
+          :end_pos => x[:suffix][-1].tag
+        )
       end
     end
   end

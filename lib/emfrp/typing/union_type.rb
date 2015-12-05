@@ -184,7 +184,8 @@ module Emfrp
 
       def inspect
         if self.var?
-          "a#{self.name_id}[#{@original_name_id}]" + (@original_typevar_name ? "(#{@original_typevar_name})" : "")
+          #"a#{self.name_id}[#{@original_name_id}]" + (@original_typevar_name ? "(#{@original_typevar_name})" : "")
+          "a#{self.name_id}" + (@original_typevar_name ? "(#{@original_typevar_name})" : "")
         else
           args = self.typeargs.size > 0 ? "[#{self.typeargs.map{|t| t.inspect}.join(", ")}]" : ""
           "#{self.typename}#{args}"

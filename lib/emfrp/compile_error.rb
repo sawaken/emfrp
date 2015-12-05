@@ -42,7 +42,7 @@ module Emfrp
           end
         end
       end
-      return nil
+      nil
     end
 
     def factor_name(factor)
@@ -57,7 +57,9 @@ module Emfrp
 
     def print_lexical_factor(factor, output_io, file_loader)
       src_lines = nil
-      factor_file_name = find_factor_file_name(factor)
+      unless factor_file_name = find_factor_file_name(factor)
+        raise "assertion error: cannot detect file_name"
+      end
       src_str = file_loader.get_src_from_full_path(factor_file_name)
       src_lines = src_str.each_line.to_a
       tags = collect_factor_tags(factor)

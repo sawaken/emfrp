@@ -45,7 +45,7 @@ module Emfrp
       when VarRef
         if tbl[syntax[:name]].size == 0
           if top[:dict][:data_space][syntax[:name][:desc]]
-            syntax[:binder] = Link.new(top[:dict][:data_space][syntax[:name][:desc]])
+            syntax[:binder] = top[:dict][:data_space][syntax[:name][:desc]]
           else
             PreConvert.err("Unbound variable `#{syntax[:name][:desc]}':\n", syntax)
           end

@@ -2,7 +2,8 @@ require 'pp'
 require 'emfrp/file_loader'
 require "emfrp/parser/parser"
 require 'emfrp/pre_check/pre_check'
-require 'emfrp/typing/typing2'
+require 'emfrp/pre_convert/pre_convert'
+require 'emfrp/typing/typing'
 require 'emfrp/convert/convert'
 require 'emfrp/compile_error'
 require 'emfrp/interpreter/evaluater'
@@ -20,9 +21,9 @@ module Emfrp
       @command_manager = CommandManager.make(self)
       @top = Parser.parse_input(main_path, @file_loader, Parser.module_or_material_file)
       @infix_parser = Parser.from_infixes_to_parser(@top[:infixes])
-      Parser.infix_convert(@top, @infix_parser)
-      PreCheck.check(@top)
-      Typing2.typing(@top)
+      @top = Parser.infix_convert(@top, @infix_parser)
+      PreConvert.convert(@top)
+      Typing.typing(@top)
     rescue Parser::ParsingError => err
       err.print_error(@output_io)
       raise InterpreterError.new
@@ -35,13 +36,13 @@ module Emfrp
 
     end
 
-    def append_def(readline_id, def_str)
-      file_name = "command-line#{readline_id}"
+    def append_def(uniq_id, def_str)
+      file_name = "command-line-#{uniq_id}"
       @file_loader.add_to_loaded(file_name, def_str)
       d = Parser.parse(def_str, file_name, Parser.oneline_file)
-      Parser.infix_convert(d, @infix_parser)
-      PreCheck.additional_check(@top, d)
-      Typing2.typing(@top, d)
+      d = Parser.infix_convert(d, @infix_parser)
+      PreConvert.additional_convert(@top, d)
+      Typing.additional_typing(@top, d)
       @top.add(d)
       return true
     rescue Parser::ParsingError => err
@@ -49,7 +50,18 @@ module Emfrp
       return false
     rescue CompileError => err
       err.print_error(@output_io, @file_loader)
+      PreConvert.cancel(@top, d)
       return false
+    end
+
+    def str_to_exp(exp_str)
+      @eval_serial ||= (0..1000).to_a
+      uname = "tmp%03d" % @eval_serial.shift
+      if append_def(uname, "data #{uname} = #{exp_str}")
+        @top[:datas].last[:exp]
+      else
+        nil
+      end
     end
 
     def exec_embeded_commands(only_on_main_path=false)
@@ -72,11 +84,16 @@ module Emfrp
       case line
       when /^\s*(data|func|type)\s(.*)$/
         append_def(readline_id, line)
+      when /^[a-z][a-zA-Z0-9]*\s*=(.*)$/
+        append_def(readline_id, "data #{line}")
       when /^\s*\:([a-z\-]+)\s*(.*)$/
-        @command_manager.exec($1, $2)
+        @command_manager.exec($1, $2, readline_id)
+      when ""
+        true
       else
-        if append_def(readline_id, "data tmp#{readline_id} = #{line}")
-          puts Evaluater.eval_to_str(@top, @top[:datas].last[:exp])
+        if exp = str_to_exp(line)
+          val = Evaluater.eval_exp(@top, exp)
+          puts "#{Evaluater.value_to_s(val)} : #{exp[:typing].inspect}"
           return true
         else
           return false

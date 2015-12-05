@@ -3,58 +3,66 @@ module Emfrp
     module Evaluater
       extend self
 
-      def eval_to_str(top, exp)
-        v = eval_exp(top, exp)
-        return "#{value_to_s(v)} : #{exp[:typing].to_uniq_str}"
-      end
-
-      def assert_equals(top, exp1, exp2)
-        v1 = eval_exp(top, exp1)
-        v2 = eval_exp(top, exp2)
-        return v1 == v2
-      end
-
-      def eval_exp(exp, env={})
+      def eval_exp(top, exp, env={})
         case exp
         when FuncCall
-          case f = exp[:func].get
+          case f = top[:dict][:func_space][exp[:name][:desc]].get
           when PrimFuncDef
             if ruby_exp = f[:foreigns].find{|x| x[:language][:desc] == "ruby"}
               proc_str = "proc{|#{f[:params].map{|x| x[:name][:desc]}.join(",")}| #{ruby_exp[:desc]}}"
-              eval(proc_str).call(*exp[:args].map{|e| eval_exp(e, env)})
+              return eval(proc_str).call(*exp[:args].map{|e| eval_exp(top, e, env)})
             else
               raise "Primitive Function `#{f[:name][:desc]}` is not defined for ruby"
             end
           when FuncDef
             f[:params].map{|param| [param[:name], Link.new(f)]}.zip(exp[:args]).each do |key, arg|
-              env[key] = eval_exp(arg, env)
+              env[key] = eval_exp(top, arg, env)
             end
-            eval_exp(f[:exp], env)
+            return eval_exp(top, f[:exp], env)
           end
         when ValueConst
-          [exp[:name][:desc].to_sym] + exp[:args].map{|e| eval_exp(e, env)}
+          return [exp[:name][:desc].to_sym] + exp[:args].map{|e| eval_exp(top, e, env)}
         when LiteralIntegral
-          exp[:entity][:desc].to_i
+          return exp[:entity][:desc].to_i
         when LiteralChar
-          exp[:entity].ord
+          return exp[:entity].ord
         when LiteralFloating
-          exp[:entity][:desc].to_f
+          return exp[:entity][:desc].to_f
         when VarRef
           key = [exp[:name], exp[:binder]]
-          if exp[:binder].get.is_a?(DataDef) && !env[key]
-            env[key] = eval_exp(exp[:binder].get[:exp], env)
+          unless env[key]
+            if exp[:binder].get.is_a?(DataDef)
+              env[key] = eval_exp(top, exp[:binder].get[:exp], env)
+            else
+              raise "Assertion error: #{key} is unbound"
+            end
           end
-          env[key]
+          return env[key]
         when MatchExp
-          left_val = eval_exp(exp[:exp], env)
+          left_val = eval_exp(top, exp[:exp], env)
           exp[:cases].each do |c|
             if match_result = pattern_match(c, left_val)
-              return eval_exp(c[:exp], env.merge(match_result))
+              return eval_exp(top, c[:exp], env.merge(match_result))
             end
           end
           raise "pattern match fail"
+        when SkipExp
+          throw :skip, :skip
         else
           raise "Unexpected expression type #{exp.class} (bug)"
+        end
+      end
+
+      def eval_node(top, node_def, exps)
+        env = {}
+        if node_def[:params].size != exps.size
+          raise "Assertion error: invalid length of args"
+        end
+        node_def[:params].map{|param| [param[:as], Link.new(node_def)]}.zip(exps).each do |key, arg|
+          env[key] = eval_exp(top, arg, env)
+        end
+        return catch(:skip) do
+          return eval_exp(top, node_def[:exp], env)
         end
       end
 

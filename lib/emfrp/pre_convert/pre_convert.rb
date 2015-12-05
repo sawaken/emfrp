@@ -21,6 +21,10 @@ module Emfrp
       AlphaConvert.alpha_convert(top, definition)
     end
 
+    def cancel(top, definition)
+      MakeNameDict.remove_dict(top[:dict], definition)
+    end
+
     def err(msg, *facts)
       raise PreCheckError.new(msg, *facts)
     end

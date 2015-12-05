@@ -8,6 +8,8 @@ type static Opt[a] = Some(a) | None
 #@ :assert-equals 1, (1,2).fst
 #@ :assert-equals 2, (1,2).snd
 
+type Unit = Unit
+type Tuple1[t0] = Tuple1(t0)
 type Tuple2[t0, t1] = Tuple2(t0, t1)
 type Tuple3[t0, t1, t2] = Tuple3(t0, t1, t2)
 type Tuple4[t0, t1, t2, t3] = Tuple4(t0, t1, t2, t3)
@@ -21,6 +23,9 @@ func fst (t : Tuple2[a, b]) : a = t of Tuple2(x, y) -> x
 #- snd("Tuple2") = "second element of Tuple2"
 func snd (t : Tuple2[a, b]) : b = t of Tuple2(x, y) -> y
 
+# Pair
+# --------------------
+type Pair[a] = Pair(a, a)
 
 # Arithmetic Operations
 # --------------------
