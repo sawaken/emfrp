@@ -20,3 +20,7 @@ func distant(a, b) = {
 node init[(0, 0)] distantPoint(inX, inY, distantPoint@last as l) = distant((inX, inY), l)
 node outX(distantPoint as p) = p of (x, y) -> x
 node outY(distantPoint as p) = p of (x, y) -> y
+
+#@ :assert-module 0, 0 => 0, 0
+#@ : 1, 1 => 1, 1
+#@ : 0, 0 => 1, 1

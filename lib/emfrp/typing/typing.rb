@@ -1,5 +1,6 @@
 require 'emfrp/typing/union_type'
 require 'emfrp/typing/typing_error'
+require 'emfrp/compile_error'
 
 module Emfrp
   module Typing
@@ -43,8 +44,9 @@ module Emfrp
       end
       # unify Outputs and Nodes
       top[:outputs].each do |x|
+        x[:typing] = UnionType.from_type(x[:type])
         node = assoc(top, :node_space, x)
-        try_unify(node[:typing], UnionType.from_type(x[:type]), "output `#{x[:name][:desc]}'", x)
+        try_unify(node[:typing], x[:typing], "output `#{x[:name][:desc]}'", x)
       end
       # unify Node-params and Nodes
       top[:nodes].each do |n|
@@ -72,11 +74,15 @@ module Emfrp
         end
         s[:typing] = typing_exp(top, s[:exp])
         if s[:type]
-          str = "type-annotation for node `#{s[:name][:desc]}'"
+          str = "type-annotation for func `#{s[:name][:desc]}'"
           try_unify(UnionType.from_type(s[:type], tbl), s[:typing], str, s)
         end
       when DataDef
         s[:typing] = typing_exp(top, s[:exp])
+        if s[:type]
+          str = "type-annotation for data `#{s[:name][:desc]}'"
+          try_unify(UnionType.from_type(s[:type], tbl), s[:typing], str, s)
+        end
       when PrimFuncDef
         s[:params].each do |x|
           x[:typing] = UnionType.from_type(x[:type])
@@ -120,12 +126,13 @@ module Emfrp
         end
         return e[:typing] = return_type
       when MatchExp
-        left_type = typing_exp(top, e[:exp])
+        pattern_type = UnionType.new
         return_type = UnionType.new
         e[:cases].each do |c|
-          try_unify(left_type, typing_pattern(top, c[:pattern]), "pattern of MatchExp", c[:pattern])
+          try_unify(pattern_type, typing_pattern(top, c[:pattern]), "pattern of MatchExp", c[:pattern])
           try_unify(return_type, typing_exp(top, c[:exp]), "body-expression of MatchExp", c[:exp])
         end
+        try_unify(pattern_type, typing_exp(top, e[:exp]), "left-exp of MatchExp", e[:exp])
         return e[:typing] = return_type
       when LiteralIntegral
         return e[:typing] = UnionType.new("Int", [])

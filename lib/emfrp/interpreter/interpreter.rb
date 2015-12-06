@@ -1,7 +1,6 @@
 require 'pp'
 require 'emfrp/file_loader'
 require "emfrp/parser/parser"
-require 'emfrp/pre_check/pre_check'
 require 'emfrp/pre_convert/pre_convert'
 require 'emfrp/typing/typing'
 require 'emfrp/convert/convert'
@@ -54,10 +53,11 @@ module Emfrp
       return false
     end
 
-    def str_to_exp(exp_str)
+    def str_to_exp(exp_str, type=nil)
       @eval_serial ||= (0..1000).to_a
       uname = "tmp%03d" % @eval_serial.shift
-      if append_def(uname, "data #{uname} = #{exp_str}")
+      type_ano = type ? " : #{type}" : ""
+      if append_def(uname, "data #{uname}#{type_ano} = #{exp_str}")
         @top[:datas].last[:exp]
       else
         nil
@@ -87,13 +87,21 @@ module Emfrp
       when /^[a-z][a-zA-Z0-9]*\s*=(.*)$/
         append_def(readline_id, "data #{line}")
       when /^\s*\:([a-z\-]+)\s*(.*)$/
+        @last_command = $1
         @command_manager.exec($1, $2, readline_id)
+      when /^\s*\:\s+(.*)$/
+        if @last_command
+          @command_manager.exec(@last_command, $1, readline_id)
+        else
+          puts "Error: there isn't a last-executed command"
+          false
+        end
       when ""
         true
       else
         if exp = str_to_exp(line)
           val = Evaluater.eval_exp(@top, exp)
-          puts "#{Evaluater.value_to_s(val)} : #{exp[:typing].inspect}"
+          puts "#{Evaluater.value_to_s(val)} : #{exp[:typing].inspect.colorize(:green)}"
           return true
         else
           return false

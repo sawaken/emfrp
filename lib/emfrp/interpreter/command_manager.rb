@@ -137,29 +137,17 @@ module Emfrp
               n = @top[:dict][:node_space][$1]
               if n && n.get.is_a?(NodeDef)
                 node_def = n.get
-                a_exp = str_to_exp("(Unit, #{$2})")
-                if a_exp && a_exp[:args].size - 1 == node_def[:params].size
-                  begin
-                    args = a_exp[:args].drop(1)
-                    args.zip(node_def[:params]).each do |a, param|
-                      a[:typing].unify(param[:typing])
-                    end
-                    if $3.strip == "skip"
-                      v2 = :skip
-                    else
-                      if r_exp = str_to_exp($3)
-                        r_exp[:typing].unify(node_def[:typing])
-                        v2 = Evaluater.eval_exp(@top, r_exp)
-                      else
-                        puts "Error: invalid return-expression"
-                        next false
-                      end
-                    end
-                  rescue Typing::UnionType::UnifyError
-                    puts "Error: invalid argument type for node `#{$1}'"
+                types = node_def[:params].map{|x| x[:typing].to_uniq_str}
+                if a_exp = str_to_exp("(Unit, #{$2.strip})", "(Unit, #{types.join(", ")})")
+                  v1 = Evaluater.eval_node_as_func(@top, node_def, a_exp[:args].drop(1))
+                  if $3.strip == "skip"
+                    v2 = :skip
+                  elsif r_exp = str_to_exp($3.strip, "#{node_def[:typing].to_uniq_str}")
+                    v2 = Evaluater.eval_exp(@top, r_exp)
+                  else
+                    puts "Error: invalid expected-return-expression"
                     next false
                   end
-                  v1 = Evaluater.eval_node(@top, node_def, args)
                   if v1 == v2
                     next true
                   else
@@ -170,7 +158,7 @@ module Emfrp
                     next false
                   end
                 else
-                  puts "Error: invalid argument-expression"
+                  puts "Error: invalid node-argument-expression"
                   next false
                 end
               else
@@ -182,6 +170,37 @@ module Emfrp
               puts "usage:"
               puts "  :assert-node <Node-name> <arg-exp>* => <expected-return-exp>"
               next false
+            end
+          end
+
+          command "assert-module" do |arg|
+            if arg =~ /^(.*)=>(.*)$/
+              input_types = @top[:inputs].map{|x| x[:typing].to_uniq_str}
+              input_exps = str_to_exp("(Unit, #{$1})", "(Unit, #{input_types.join(", ")})")
+              output_types = @top[:outputs].map{|x| x[:typing].to_uniq_str}
+              output_exps = str_to_exp("(Unit, #{$2})", "(Unit, #{output_types.join(", ")})")
+              if input_exps == nil || output_exps == nil
+                puts "Error: invalid expression"
+                next false
+              end
+              # evaluate
+              last_state = @current_state ? @current_state.clone : nil
+              @current_state = {}
+              output_vals = Evaluater.eval_module(@top, input_exps[:args].drop(1), @current_state, last_state)
+              expected_output_vals = output_exps[:args].drop(1).map{|x| Evaluater.eval_exp(@top, x)}
+              # assert
+              if expected_output_vals != output_vals
+                puts "Module Assertion failed".colorize(:red)
+                puts "Description: #{arg}"
+                puts "Expected: #{expected_output_vals.map{|x| Evaluater.value_to_s(x)}.join(", ")}"
+                puts "Real:     #{output_vals.map{|x| Evaluater.value_to_s(x)}.join(", ")}"
+                false
+              else
+                true
+              end
+            else
+              puts "Error: invalid argument for :assert-module"
+              false
             end
           end
 

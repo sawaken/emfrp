@@ -53,7 +53,7 @@ module Emfrp
         end
       end
 
-      def eval_node(top, node_def, exps)
+      def eval_node_as_func(top, node_def, exps)
         env = {}
         if node_def[:params].size != exps.size
           raise "Assertion error: invalid length of args"
@@ -64,6 +64,38 @@ module Emfrp
         return catch(:skip) do
           return eval_exp(top, node_def[:exp], env)
         end
+      end
+
+      def eval_module(top, input_exps, current_state, last_state=nil)
+        top[:inputs].zip(input_exps).each do |i, e|
+          current_state[i] = eval_exp(top, e)
+        end
+        unless last_state
+          last_state = {}
+          (top[:inputs] + top[:nodes]).each do |d|
+            last_state[d] = eval_exp(top, d[:init_exp]) if d[:init_exp]
+          end
+        end
+        return top[:outputs].map do |x|
+          eval_node(top, top[:dict][:node_space][x[:name][:desc]].get, current_state, last_state)
+        end
+      end
+
+      def eval_node(top, node_def, current_state, last_state)
+        return current_state[node_def] if current_state[node_def]
+        env = {}
+        node_def[:params].each do |param|
+          key = [param[:as], Link.new(node_def)]
+          pn = top[:dict][:node_space][param[:name][:desc]].get
+          if param[:last]
+            raise "Assertion error" unless last_state[pn]
+            env[key] = last_state[pn]
+          else
+            env[key] = eval_node(top, pn, current_state, last_state)
+          end
+        end
+        res = catch(:skip){ eval_exp(top, node_def[:exp], env) }
+        return current_state[node_def] = res == :skip ? last_state[node_def] : res
       end
 
       def pattern_match(c, v, pattern=c[:pattern], vars={})

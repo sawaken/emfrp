@@ -1,4 +1,5 @@
 require 'colorize'
+require 'emfrp/compile_error'
 
 module Emfrp
   module Typing
