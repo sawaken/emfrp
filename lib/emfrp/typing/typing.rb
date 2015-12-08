@@ -44,7 +44,11 @@ module Emfrp
       end
       # unify Outputs and Nodes
       top[:outputs].each do |x|
-        x[:typing] = UnionType.from_type(x[:type])
+        if x[:type]
+          x[:typing] = UnionType.from_type(x[:type])
+        else
+          x[:typing] = UnionType.new
+        end
         node = assoc(top, :node_space, x)
         try_unify(node[:typing], x[:typing], "output `#{x[:name][:desc]}'", x)
       end

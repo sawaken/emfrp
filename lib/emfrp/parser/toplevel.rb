@@ -127,10 +127,10 @@ module Emfrp
     parser :output_def do
       seq(
         var_name.name(:name),
-        many(ws),
-        str(":"),
-        many(ws),
-        type.err("param-def", "type").name(:type)
+        opt_fail(
+          many(ws) > str(":") > many(ws) >
+          type.err("param-def", "type")
+        ).to_nil.name(:type)
       ).map do |x|
         OutputDef.new(x.to_h)
       end

@@ -3,8 +3,7 @@ in
   inX : Int,
   inY : Int
 out
-  outX : Int,
-  outY : Int
+  outX, outY
 use
   Std
 
