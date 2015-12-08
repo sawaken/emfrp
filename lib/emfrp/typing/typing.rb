@@ -175,7 +175,7 @@ module Emfrp
     def typing_pattern(top, pattern)
       case pattern
       when AnyPattern
-        return pattern[:typing] = UnionType.new
+        pattern[:typing] = UnionType.new
       when ValuePattern
         tvalue = assoc(top, :const_space, pattern)
         typing_syntax(top, tvalue)
@@ -184,12 +184,17 @@ module Emfrp
         pattern[:args].each_with_index do |a, i|
           try_unify(etypes[i], rtypes[i], "arg for pattern `#{pattern[:name][:desc]}'", a)
         end
-        return pattern[:typing] = return_type
+        pattern[:typing] = return_type
       when IntegralPattern
-        return pattern[:typing] = UnionType.new("Int", [])
+        pattern[:typing] = UnionType.new("Int", [])
       else
         raise "Assertion error: unexpected pattern type #{pattern.class}"
       end
+      if pattern[:type]
+        s = "type annotation for pattern"
+        try_unify(UnionType.from_type(pattern[:type]), pattern[:typing], s, pattern)
+      end
+      return pattern[:typing]
     end
 
     def clone_utypes(*utypes)

@@ -28,10 +28,10 @@ module Emfrp
         exp.err("if-exp", "valid then exp").name(:else),
       ).map do |x|
         true_sym = SSymbol.new(:desc => "True")
-        true_pat = ValuePattern.new(:name => true_sym, :args => [], :ref => nil)
+        true_pat = ValuePattern.new(:name => true_sym, :args => [], :ref => nil, :type => nil)
         true_case = Case.new(:pattern => true_pat, :exp => x[:then])
         false_sym = SSymbol.new(:desc => "False")
-        false_pat = ValuePattern.new(:name => false_sym, :args => [], :ref => nil)
+        false_pat = ValuePattern.new(:name => false_sym, :args => [], :ref => nil, :type => nil)
         false_case = Case.new(:pattern => false_pat, :exp => x[:else])
         MatchExp.new(:exp => x[:cond], :cases => [true_case, false_case])
       end
@@ -92,7 +92,17 @@ module Emfrp
     end
 
     parser :pattern do
-      dont_care_pattern ^ name_pattern ^ recursive_pattern ^ no_arg_pattern ^ tuple_pattern ^ integral_pattern
+      pat = dont_care_pattern ^ name_pattern ^ recursive_pattern ^ no_arg_pattern ^ tuple_pattern ^ integral_pattern
+      seq(
+        pat.name(:pattern),
+        opt_fail(
+          many(ws) > str(":") > many(ws) >
+          type.err("param-def", "type")
+        ).to_nil.name(:type)
+      ).map do |x|
+        x[:pattern][:type] = x[:type]
+        x[:pattern]
+      end
     end
 
     parser :dont_care_pattern do
