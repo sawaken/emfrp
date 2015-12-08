@@ -188,7 +188,9 @@ module Emfrp
               # evaluate
               last_state = @current_state ? @current_state.clone : nil
               @current_state = {}
-              output_vals = Evaluater.eval_module(@top, input_exps[:args].drop(2), @current_state, last_state)
+              @node_replacement ||= {}
+              output_vals = Evaluater.eval_module(@top, input_exps[:args].drop(2),
+                @current_state, last_state, @node_replacement)
               expected_output_vals = output_exps[:args].drop(1).map{|x| Evaluater.eval_exp(@top, x)}
               # assert
               if expected_output_vals != output_vals
@@ -222,6 +224,35 @@ module Emfrp
             end
             puts "Error: invalid argument for :assert-type"
             next :command_format_error
+          end
+
+          command "set-dummy-node" do |arg|
+            if arg =~ /^\s*([a-z][a-zA-Z0-9]*)\s*=>\s*([a-z][a-zA-Z0-9]*)\s*$/
+              real_n_ln, dummy_n_ln = @top[:dict][:node_space][$1], @top[:dict][:node_space][$2]
+              unless real_n_ln
+                puts "Error: Node `#{$1}' is undefined"
+                next :command_format_error
+              end
+              unless dummy_n_ln
+                puts "Error: Node `#{$2}' is undefined"
+                next :command_format_error
+              end
+              unless real_n_ln.get[:typing].to_uniq_str == dummy_n_ln.get[:typing].to_uniq_str
+                puts "Error: Types of Real-Node `#{$1}' and Dummy-Node `#{$2}' are different"
+                puts "#{$1} : #{real_n_ln.get[:typing].to_uniq_str}"
+                puts "#{$2} : #{dummy_n_ln.get[:typing].to_uniq_str}"
+                next :command_format_error
+              end
+              if real_n_ln.get[:init_exp] && !dummy_n_ln.get[:init_exp]
+                puts "Error: Dummy-Node `#{$2}' should have init-exp"
+                next :command_format_error
+              end
+              @node_replacement ||= {}
+              @node_replacement[$1] = dummy_n_ln.get
+              next nil
+            else
+              next :command_format_error
+            end
           end
 
         end

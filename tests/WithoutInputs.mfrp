@@ -12,7 +12,8 @@ node init[0] x = x@last + 1
 #@ :assert-node const0 => 0
 node const0 = 0
 
-#@ :assert-module => 1
+#@ :assert-module
+#-   => 1
 #@ : => 2
 #@ : => 3
 #@ : => 4

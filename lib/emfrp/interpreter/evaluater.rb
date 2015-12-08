@@ -66,7 +66,7 @@ module Emfrp
         end
       end
 
-      def eval_module(top, input_exps, current_state, last_state=nil)
+      def eval_module(top, input_exps, current_state, last_state, replacement)
         top[:inputs].zip(input_exps).each do |i, e|
           current_state[i] = eval_exp(top, e)
         end
@@ -77,11 +77,12 @@ module Emfrp
           end
         end
         return top[:outputs].map do |x|
-          eval_node(top, top[:dict][:node_space][x[:name][:desc]].get, current_state, last_state)
+          eval_node(top, top[:dict][:node_space][x[:name][:desc]].get, current_state, last_state, replacement)
         end
       end
 
-      def eval_node(top, node_def, current_state, last_state)
+      def eval_node(top, node_def, current_state, last_state, replacement)
+        node_def = replacement[node_def[:name][:desc]] if replacement[node_def[:name][:desc]]
         return current_state[node_def] if current_state[node_def]
         env = {}
         node_def[:params].each do |param|
@@ -91,7 +92,7 @@ module Emfrp
             raise "Assertion error" unless last_state[pn]
             env[key] = last_state[pn]
           else
-            env[key] = eval_node(top, pn, current_state, last_state)
+            env[key] = eval_node(top, pn, current_state, last_state, replacement)
           end
         end
         res = catch(:skip){ eval_exp(top, node_def[:exp], env) }
