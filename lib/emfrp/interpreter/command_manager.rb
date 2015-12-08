@@ -137,9 +137,10 @@ module Emfrp
               n = @top[:dict][:node_space][$1]
               if n && n.get.is_a?(NodeDef)
                 node_def = n.get
-                types = node_def[:params].map{|x| x[:typing].to_uniq_str}
-                if a_exp = str_to_exp("(Unit, #{$2.strip})", "(Unit, #{types.join(", ")})")
-                  v1 = Evaluater.eval_node_as_func(@top, node_def, a_exp[:args].drop(1))
+                types = ["Unit", "Unit"] + node_def[:params].map{|x| x[:typing].to_uniq_str}
+                exp_str = ($2.strip == "" ? "(Unit, Unit)" : "(Unit, Unit, #{$2.strip})")
+                if a_exp = str_to_exp(exp_str, "(#{types.join(", ")})")
+                  v1 = Evaluater.eval_node_as_func(@top, node_def, a_exp[:args].drop(2))
                   if $3.strip == "skip"
                     v2 = :skip
                   elsif r_exp = str_to_exp($3.strip, "#{node_def[:typing].to_uniq_str}")
@@ -175,8 +176,9 @@ module Emfrp
 
           command "assert-module" do |arg|
             if arg =~ /^(.*)=>(.*)$/
-              input_types = @top[:inputs].map{|x| x[:typing].to_uniq_str}
-              input_exps = str_to_exp("(Unit, #{$1})", "(Unit, #{input_types.join(", ")})")
+              input_types = ["Unit", "Unit"] + @top[:inputs].map{|x| x[:typing].to_uniq_str}
+              exp_str = ($1.strip == "" ? "(Unit, Unit)" : "(Unit, Unit, #{$1.strip})")
+              input_exps = str_to_exp(exp_str, "(#{input_types.join(", ")})")
               output_types = @top[:outputs].map{|x| x[:typing].to_uniq_str}
               output_exps = str_to_exp("(Unit, #{$2})", "(Unit, #{output_types.join(", ")})")
               if input_exps == nil || output_exps == nil
@@ -186,7 +188,7 @@ module Emfrp
               # evaluate
               last_state = @current_state ? @current_state.clone : nil
               @current_state = {}
-              output_vals = Evaluater.eval_module(@top, input_exps[:args].drop(1), @current_state, last_state)
+              output_vals = Evaluater.eval_module(@top, input_exps[:args].drop(2), @current_state, last_state)
               expected_output_vals = output_exps[:args].drop(1).map{|x| Evaluater.eval_exp(@top, x)}
               # assert
               if expected_output_vals != output_vals

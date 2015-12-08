@@ -29,10 +29,10 @@ module Emfrp
         symbol("module").name(:keyword1),
         many1(ws).err(place, "space after `module' keyword"),
         ident_begin_upper.name(:name),
-        many1(ws).err(place, "space after module name"),
-        symbol("in").err(place, "keyword `in'"),
-        many1(ws).err(place, "space after `in' keyword"),
-        many1_fail(input_def, comma_separator).err(place, "definitions of inputs").name(:inputs),
+        opt_fail(
+          many1(ws) > symbol("in") > many1(ws) >
+          many1_fail(input_def, comma_separator).err(place, "definitions of inputs")
+        ).map(&:flatten).name(:inputs),
         many1(ws).err(place, "spaec after definitions of input"),
         symbol("out").err(place, "keyword `out'"),
         many1(ws).err(place, "space after keyword `out'"),
