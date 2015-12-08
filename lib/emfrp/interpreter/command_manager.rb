@@ -20,7 +20,7 @@ module Emfrp
           @interpreter.instance_exec(arg, command_name, readline_id, &@command_tbl[command_name])
         else
           @interpreter.puts "Error: undefined command `#{command_name}'"
-          false
+          return :exec_error
         end
       end
 
@@ -40,10 +40,10 @@ module Emfrp
               when "func-ast"
                 pp func_def
               end
-              true
+              nil
             else
               puts "Error: undefined function `#{arg}'"
-              false
+              :command_format_error
             end
           end
 
@@ -55,10 +55,10 @@ module Emfrp
               when "data-ast"
                 pp data_def
               end
-              true
+              nil
             else
               puts "Error: undefined data `#{arg}'"
-              false
+              :command_format_error
             end
           end
 
@@ -67,10 +67,10 @@ module Emfrp
             ptype_def = @top[:ptypes].find{|x| x[:name][:desc] == arg}
             if type_def || ptype_def
               pp type_def || ptype_def
-              true
+              nil
             else
               puts "Error: undefined type `#{arg}`"
-              false
+              :command_format_error
             end
           end
 
@@ -82,26 +82,26 @@ module Emfrp
               when "node-ast"
                 pp node_def
               end
-              true
+              nil
             else
               puts "Error: undefined node/input `#{arg}'"
-              false
+              :command_format_error
             end
           end
 
           command "ast" do
             pp @top
-            true
+            nil
           end
 
           command "ifuncs-ast" do
             pp @top[:ifuncs]
-            true
+            nil
           end
 
           command "itypes-ast" do
             pp @top[:itypes]
-            true
+            nil
           end
 
           command "assert-equals" do |arg, c, rid|
@@ -109,18 +109,18 @@ module Emfrp
               val1 = Evaluater.eval_exp(@top, exp[:args][0])
               val2 = Evaluater.eval_exp(@top, exp[:args][1])
               if val1 == val2
-                true
+                nil
               else
                 puts "Assertion failed".colorize(:red)
                 puts "Description: #{arg}"
                 puts "Type: #{exp[:args][0][:typing].inspect.colorize(:green)}"
                 puts "Expected: #{Evaluater.value_to_s(val1)}"
                 puts "Real:     #{Evaluater.value_to_s(val2)}"
-                false
+                :assertion_error
               end
             else
               puts "Error: invalid argument for :assert-equals"
-              false
+              :command_format_error
             end
           end
 
@@ -129,7 +129,7 @@ module Emfrp
           end
 
           command "set-func-doc" do |arg|
-            true
+            nil
           end
 
           command "assert-node" do |arg|
@@ -146,30 +146,30 @@ module Emfrp
                     v2 = Evaluater.eval_exp(@top, r_exp)
                   else
                     puts "Error: invalid expected-return-expression"
-                    next false
+                    next :command_format_error
                   end
                   if v1 == v2
-                    next true
+                    next nil
                   else
                     puts "Node Assertion failed".colorize(:red)
                     puts "Description: #{arg}"
                     puts "Expected: #{Evaluater.value_to_s(v2)}"
                     puts "Real:     #{Evaluater.value_to_s(v1)}"
-                    next false
+                    next :assertion_error
                   end
                 else
                   puts "Error: invalid node-argument-expression"
-                  next false
+                  next :command_format_error
                 end
               else
                 puts "Error: invalid node name #{$1}"
-                next false
+                next :command_format_error
               end
             else
               puts "Error: invalid argument for :assert-node"
               puts "usage:"
               puts "  :assert-node <Node-name> <arg-exp>* => <expected-return-exp>"
-              next false
+              next :command_format_error
             end
           end
 
@@ -181,7 +181,7 @@ module Emfrp
               output_exps = str_to_exp("(Unit, #{$2})", "(Unit, #{output_types.join(", ")})")
               if input_exps == nil || output_exps == nil
                 puts "Error: invalid expression"
-                next false
+                next :command_format_error
               end
               # evaluate
               last_state = @current_state ? @current_state.clone : nil
@@ -194,13 +194,13 @@ module Emfrp
                 puts "Description: #{arg}"
                 puts "Expected: #{expected_output_vals.map{|x| Evaluater.value_to_s(x)}.join(", ")}"
                 puts "Real:     #{output_vals.map{|x| Evaluater.value_to_s(x)}.join(", ")}"
-                false
+                :assertion_error
               else
-                true
+                nil
               end
             else
               puts "Error: invalid argument for :assert-module"
-              false
+              :command_format_error
             end
           end
 

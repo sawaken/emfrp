@@ -16,6 +16,6 @@ begin
       inter.process_repl_line(input)
     end
   end
-rescue Emfrp::InterpreterError
+rescue Emfrp::Interpreter::InterpreterError
   exit(1)
 end

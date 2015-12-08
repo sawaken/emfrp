@@ -9,6 +9,10 @@ module Emfrp
         @status = status
       end
 
+      def code
+        @status.message[:code] || :noname
+      end
+
       def line_number
         if @status.rest.length > 0
           @status.rest[0].tag[:line_number]

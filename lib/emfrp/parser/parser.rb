@@ -134,8 +134,8 @@ module Emfrp
       end
     end
 
-    def err(place, required)
-      self.onfail(:place => place, :required => required)
+    def err(place, required, code=nil)
+      self.onfail(:place => place, :required => required, :code => code)
     end
 
     def to_nil

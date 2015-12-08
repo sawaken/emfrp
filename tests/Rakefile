@@ -1,0 +1,16 @@
+$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+require 'emfrp'
+
+FILES = Dir.glob("./*.mfrp")
+
+task :default do
+  FILES.each do |f|
+    puts "TESTING #{f}".colorize(:light_blue)
+    inter = Emfrp::Interpreter.new(Emfrp::IncludeDirs, STDOUT, f)
+    unless inter.exec_embeded_commands()
+      puts " => ok".colorize(:green)
+    else
+      puts " => fail".colorize(:red)
+    end
+  end
+end

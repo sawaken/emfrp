@@ -17,9 +17,15 @@ func distant(a, b) = {
   if distantA < distantB then b else a
 }
 
-node init[(0, 0)] distantPoint(inX, inY, distantPoint@last as l) = distant((inX, inY), l)
-node outX(distantPoint as p) = p of (x, y) -> x
-node outY(distantPoint as p) = p of (x, y) -> y
+node init[(0, 0)] from[inX, inY, point@last as l]
+point = distant((inX, inY), l)
+
+node outX = point of (x, y) -> x
+node outY = point of (x, y) -> y
+
+
+#node init[(0, 0)] (outX, outY) as point = distant((inX, inY), point@last)
+
 
 #@ :assert-module 0, 0 => 0, 0
 #@ : 1, 1 => 1, 1

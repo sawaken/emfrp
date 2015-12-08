@@ -218,7 +218,7 @@ module Emfrp
         if syntax.has_key?(:typing) && syntax[:typing].has_var?
           syntax[:typing].typevars.each do |t|
             unless allow_types.any?{|at| at.include?(t)}
-              raise TypeDetermineError.new(syntax[:typing], syntax)
+              raise TypeDetermineError.new(:undetermined, syntax[:typing], syntax)
             end
           end
         end
@@ -233,7 +233,7 @@ module Emfrp
     def try_unify(expected_utype, real_utype, place, *factors)
       real_utype.unify(expected_utype)
     rescue UnionType::UnifyError => err
-      raise TypeMatchingError.new(expected_utype, real_utype, place, *factors)
+      raise TypeMatchingError.new(:unify, expected_utype, real_utype, place, *factors)
     end
   end
 end

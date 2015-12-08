@@ -4,8 +4,14 @@ module Emfrp
   class CompileError < RuntimeError
     attr_reader :message, :factors
 
-    def initialize(message, *factors)
-      @message, @factors = message, factors
+    def initialize(message, code, *factors)
+      @message = message
+      @code = message
+      @factors = factors
+    end
+
+    def code
+      @code
     end
 
     def tag_comp(a, b)

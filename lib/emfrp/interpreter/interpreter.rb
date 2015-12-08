@@ -9,9 +9,14 @@ require 'emfrp/interpreter/evaluater'
 require 'emfrp/interpreter/command_manager'
 
 module Emfrp
-  InterpreterError = Class.new(StandardError)
-
   class Interpreter
+    class InterpreterError < StandardError
+      attr_reader :code
+      def initialize(code)
+        @code = code
+      end
+    end
+    
     def initialize(include_dirs, output_io, main_path)
       @file_loader = FileLoader.new(include_dirs)
       @main_path = main_path
@@ -25,10 +30,10 @@ module Emfrp
       Typing.typing(@top)
     rescue Parser::ParsingError => err
       err.print_error(@output_io)
-      raise InterpreterError.new
+      raise InterpreterError.new(err.code)
     rescue CompileError => err
       err.print_error(@output_io, @file_loader)
-      raise InterpreterError.new
+      raise InterpreterError.new(err.code)
     end
 
     def compile(c_output_io, h_output_io, print_log=false)
@@ -43,42 +48,45 @@ module Emfrp
       PreConvert.additional_convert(@top, d)
       Typing.additional_typing(@top, d)
       @top.add(d)
-      return true
+      return nil
     rescue Parser::ParsingError => err
       err.print_error(@output_io)
-      return false
+      return err.code
     rescue CompileError => err
       err.print_error(@output_io, @file_loader)
       PreConvert.cancel(@top, d)
-      return false
+      return err.code
     end
 
+    #-> parsed-expression or nil(fail)
     def str_to_exp(exp_str, type=nil)
       @eval_serial ||= (0..1000).to_a
       uname = "tmp%03d" % @eval_serial.shift
       type_ano = type ? " : #{type}" : ""
-      if append_def(uname, "data #{uname}#{type_ano} = #{exp_str}")
+      unless append_def(uname, "data #{uname}#{type_ano} = #{exp_str}")
         @top[:datas].last[:exp]
       else
         nil
       end
     end
 
-    def exec_embeded_commands(only_on_main_path=false)
-      @top[:commands].all? do |com|
+    #-> true-like(abnormal-term) / false-like(normal-term)
+    def exec_embeded_commands(only_on_main_path=false) #
+      @top[:commands].any? do |com|
         if !only_on_main_path || com[:file_name] == @file_loader.loaded_full_path(@main_path)
-          if process_repl_line(com[:command_str])
-            true
+          unless process_repl_line(com[:command_str])
+            nil
           else
             puts "Embeded command on #{com[:file_name]}:#{com[:line_number]}\n"
-            false
+            true
           end
         else
-          true
+          nil
         end
       end
     end
 
+    #-> true-like(abnormal-term) / false-like(normal-term)
     def process_repl_line(line)
       readline_id = proceed_readline_id()
       case line
@@ -94,17 +102,17 @@ module Emfrp
           @command_manager.exec(@last_command, $1, readline_id)
         else
           puts "Error: there isn't a last-executed command"
-          false
+          return :recall_last_executed_error
         end
       when ""
-        true
+        return nil
       else
         if exp = str_to_exp(line)
           val = Evaluater.eval_exp(@top, exp)
           puts "#{Evaluater.value_to_s(val)} : #{exp[:typing].inspect.colorize(:green)}"
-          return true
+          return nil
         else
-          return false
+          return :eval_error
         end
       end
     end

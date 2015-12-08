@@ -4,11 +4,16 @@ require 'emfrp/compile_error'
 module Emfrp
   module Typing
     class TypeMatchingError < CompileError
-      def initialize(expected_utype, real_utype, place, *factors)
+      def initialize(code, expected_utype, real_utype, place, *factors)
+        @code = code
         @expected_utype = expected_utype
         @real_utype = real_utype
         @place = place
         @factors = factors
+      end
+
+      def code
+        @code
       end
 
       def print_error(output_io, file_loader)

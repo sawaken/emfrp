@@ -21,13 +21,13 @@ module Emfrp
       case definition
       when InputDef, NodeDef
         if dict[:node_space][name]
-          PreCheck.err("Duplicate node/input name `#{name}':\n", dict[:node_space][name].get, definition)
+          PreCheck.err(:dup, "Duplicate node/input name `#{name}':\n", dict[:node_space][name].get, definition)
         else
           dict[:node_space][name] = Link.new(definition)
         end
       when FuncDef, PrimFuncDef
         if dict[:func_space][name]
-          PreCheck.err("Duplicate func/pfunc name `#{name}':\n", dict[:func_space][name].get, definition)
+          PreCheck.err(:dup, "Duplicate func/pfunc name `#{name}':\n", dict[:func_space][name].get, definition)
         else
           dict[:func_space][name] = Link.new(definition)
           if definition.is_a?(FuncDef)
@@ -35,7 +35,7 @@ module Emfrp
         end
       when TypeDef, PrimTypeDef
         if dict[:type_space][name]
-          PreCheck.err("Duplicate type/ptype name `#{name}':\n", dict[:type_space][name].get, definition)
+          PreCheck.err(:dup, "Duplicate type/ptype name `#{name}':\n", dict[:type_space][name].get, definition)
         else
           dict[:type_space][name] = Link.new(definition)
           if definition.is_a?(TypeDef)
@@ -47,13 +47,13 @@ module Emfrp
         end
       when DataDef
         if dict[:data_space][name]
-          PreCheck.err("Duplicate data name `#{name}':\n", dict[:data_space][name].get, definition)
+          PreCheck.err(:dup, "Duplicate data name `#{name}':\n", dict[:data_space][name].get, definition)
         else
           dict[:data_space][name] = Link.new(definition)
         end
       when TValue
         if dict[:const_space][name]
-          PreCheck.err("Duplicate constructor name `#{name}':\n", dict[:const_space][name].get, definition)
+          PreCheck.err(:dup, "Duplicate constructor name `#{name}':\n", dict[:const_space][name].get, definition)
         else
           dict[:const_space][name] = Link.new(definition)
         end

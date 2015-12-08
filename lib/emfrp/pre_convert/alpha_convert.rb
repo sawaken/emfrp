@@ -1,5 +1,4 @@
 module Emfrp
-  # Printing :alpha_name on VarRef
   module AlphaConvert
     extend self
 
@@ -9,16 +8,30 @@ module Emfrp
       when InputDef
         alpha_convert(top, syntax[:init_exp], tbl) if syntax[:init_exp]
       when NodeDef
-        check_duplicate_name(syntax[:params].map{|x| x[:name]})
-        vars = syntax[:params].map{|x| x[:as]}
-        check_duplicate_name(vars)
         alpha_convert(top, syntax[:init_exp], tbl) if syntax[:init_exp]
-        vars.each do |v|
-          tbl[v].push(syntax)
-        end
-        alpha_convert(top, syntax[:exp], tbl)
-        vars.each do |v|
-          tbl[v].pop
+        if syntax[:params]
+          check_duplicate_name(syntax[:params].map{|x| x[:name]})
+          vars = syntax[:params].map{|x| x[:as]}
+          check_duplicate_name(vars)
+          vars.each do |v|
+            tbl[v].push(syntax)
+          end
+          alpha_convert(top, syntax[:exp], tbl)
+          vars.each do |v|
+            tbl[v].pop
+          end
+        else
+          syntax[:params] = []
+          vars = (top[:nodes] + top[:inputs]).map{|x|
+            [x[:name], SSymbol.new(:desc => x[:name][:desc] + "@last")]
+          }.flatten
+          vars.each do |v|
+            tbl[v].push(syntax)
+          end
+          alpha_convert(top, syntax[:exp], tbl)
+          vars.each do |v|
+            tbl[v].pop
+          end
         end
       when FuncDef
         vars = syntax[:params].map{|x| x[:name]}
@@ -47,10 +60,21 @@ module Emfrp
           if top[:dict][:data_space][syntax[:name][:desc]]
             syntax[:binder] = top[:dict][:data_space][syntax[:name][:desc]]
           else
-            PreConvert.err("Unbound variable `#{syntax[:name][:desc]}':\n", syntax)
+            PreConvert.err(:unbound, "Unbound variable `#{syntax[:name][:desc]}':\n", syntax)
           end
         else
-          syntax[:binder] = Link.new(tbl[syntax[:name]].last)
+          binder = tbl[syntax[:name]].last
+          if binder.is_a?(NodeDef) && !binder[:params].find{|x| x[:as] == syntax[:name]}
+            if syntax[:name][:desc] =~ /^(.+)@last$/
+              name = SSymbol.new(:desc => $1)
+              last = true
+            else
+              name = syntax[:name]
+              last = false
+            end
+            binder[:params] << NodeRef.new(:as => syntax[:name], :name => name, :last => last)
+          end
+          syntax[:binder] = Link.new(binder)
         end
       when ValueConst, ValuePattern
         name = syntax[:name][:desc]
@@ -58,7 +82,7 @@ module Emfrp
           tvalue = tvalue_link.get
           if syntax[:args].size != tvalue[:params].size
             s = "#{syntax[:args].size} for #{tvalue[:params].size}"
-            PreConvert.err("Wrong number of arguments (#{s}) for `#{name}':\n", syntax)
+            PreConvert.err(:arg_num, "Wrong number of arguments (#{s}) for `#{name}':\n", syntax)
           end
         else
           PreConvert.err("Undefined value-constructor `#{name}':\n", syntax)
@@ -70,10 +94,10 @@ module Emfrp
           f = func_link.get
           if syntax[:args].size != f[:params].size
             s = "#{syntax[:args].size} for #{f[:params].size}"
-            PreConvert.err("Wrong number of arguments (#{s}) for `#{name}':\n", syntax)
+            PreConvert.err(:arg_num, "Wrong number of arguments (#{s}) for `#{name}':\n", syntax)
           end
         else
-          PreConvert.err("Undefined function `#{name}':\n", syntax)
+          PreConvert.err(:undef, "Undefined function `#{name}':\n", syntax)
         end
         alpha_convert(top, syntax.values, tbl)
       when Syntax
@@ -98,7 +122,7 @@ module Emfrp
       names.each do |name|
         dups = names.select{|x| x == name}
         if dups.size > 1
-          PreConvert.err("Duplicate variable names `#{name[:desc]}':\n", *dups)
+          PreConvert.err(:dup, "Duplicate variable names `#{name[:desc]}':\n", *dups)
         end
       end
     end

@@ -185,13 +185,10 @@ module Emfrp
     parser :node_def do # -> NodeDef
       seq(
         symbol("node").name(:keyword),
-        opt(many1(ws) > init_def).to_nil.name(:init_exp),
+        opt_fail(many1(ws) > init_def).to_nil.name(:init_exp),
+        opt_fail(many1(ws) > from_def).to_nil.name(:params),
         many1(ws),
         node_instance_name.err("node-def", "node name").name(:name),
-        many(ws),
-        str("("),
-        many_fail(node_ref, comma_separator).err("node-def", "list of param for node").name(:params),
-        str(")"),
         opt_fail(
           many(ws) > str(":") > many(ws) > type.err("node-def", "[Type] after :")
         ).to_nil.name(:type),
@@ -359,6 +356,17 @@ module Emfrp
         symbol("]").name(:keyword)
       ).map do |x|
         x[:exp]
+      end
+    end
+
+    parser :from_def do
+      seq(
+        symbol("from"),
+        str("[").err("from-def", "["),
+        many_fail(node_ref, comma_separator).err("from-def", "list of depended nodes").name(:params),
+        str("]").err("from-def", "]"),
+      ).map do |x|
+        x[:params]
       end
     end
 

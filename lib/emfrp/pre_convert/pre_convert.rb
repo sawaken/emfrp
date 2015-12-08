@@ -6,7 +6,7 @@ module Emfrp
   module PreConvert
     extend self
 
-    PreCheckError = Class.new(CompileError)
+    PreConvertError = Class.new(CompileError)
 
     def convert(top)
       MakeNameDict.make_name_dict(top)
@@ -25,8 +25,8 @@ module Emfrp
       MakeNameDict.remove_dict(top[:dict], definition)
     end
 
-    def err(msg, *facts)
-      raise PreCheckError.new(msg, *facts)
+    def err(code, msg, *facts)
+      raise PreConvertError.new(msg, code, *facts)
     end
   end
 end
