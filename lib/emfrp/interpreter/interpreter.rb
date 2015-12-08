@@ -1,10 +1,10 @@
 require 'pp'
-require 'emfrp/file_loader'
 require "emfrp/parser/parser"
 require 'emfrp/pre_convert/pre_convert'
 require 'emfrp/typing/typing'
 require 'emfrp/convert/convert'
 require 'emfrp/compile_error'
+require 'emfrp/interpreter/file_loader'
 require 'emfrp/interpreter/evaluater'
 require 'emfrp/interpreter/command_manager'
 
