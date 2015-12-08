@@ -206,7 +206,11 @@ module Emfrp
       if pattern[:ref] && pattern[:ref] == name
         pattern
       elsif pattern.is_a?(ValuePattern)
-        pattern[:args].find{|p| find_pattern_by_ref_name(p, name)}
+        pattern[:args].each do |p|
+          if res = find_pattern_by_ref_name(p, name)
+            return res
+          end
+        end
       else
         nil
       end
