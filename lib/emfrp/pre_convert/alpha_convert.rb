@@ -46,7 +46,7 @@ module Emfrp
       when DataDef
         alpha_convert(top, syntax[:exp], tbl)
       when Case
-        vars = find_ref_in_pattern(syntax[:pattern])
+        vars = syntax[:pattern].find_refs()
         check_duplicate_name(vars)
         vars.each do |v|
           tbl[v].push(syntax)
@@ -105,17 +105,6 @@ module Emfrp
       when Array
         syntax.each{|e| alpha_convert(top, e, tbl)}
       end
-    end
-
-    def find_ref_in_pattern(pattern) # -> [SSymbol]
-      res = []
-      if pattern[:ref]
-        res << pattern[:ref]
-      end
-      if pattern.has_key?(:args)
-        res = res + pattern[:args].map{|a| find_ref_in_pattern(a)}.flatten
-      end
-      return res
     end
 
     def check_duplicate_name(names)

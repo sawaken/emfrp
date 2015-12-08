@@ -166,6 +166,7 @@ module Emfrp
         param[:typing]
       when Case
         pattern = find_pattern_by_ref_name(binder[:pattern], name)
+        raise "Assertion error: pattern-match-var #{name[:desc]} is not found" unless pattern
         pattern[:typing]
       else
         raise "Assertion error: unexpected binder type #{binder.class}"
@@ -211,8 +212,9 @@ module Emfrp
             return res
           end
         end
+        return nil
       else
-        nil
+        return nil
       end
     end
 

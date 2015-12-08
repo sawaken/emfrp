@@ -7,15 +7,21 @@ module Emfrp
     # --------------------
 
     parser :module_top_def do
-      data_def ^ func_def ^ node_def ^ type_def ^ infix_def ^ primtype_def ^ primfunc_def ^ command_def
+      (data_def ^ func_def ^ node_def ^ type_def ^ infix_def ^ primtype_def ^ primfunc_def ^ command_def).map do |x|
+        [x].flatten
+      end
     end
 
     parser :material_top_def do
-      data_def ^ func_def ^ type_def ^ infix_def ^ primtype_def ^ primfunc_def ^ command_def
+      (data_def ^ func_def ^ type_def ^ infix_def ^ primtype_def ^ primfunc_def ^ command_def).map do |x|
+        [x].flatten
+      end
     end
 
     parser :appendable_top_def do
-      data_def ^ func_def ^ type_def
+      (data_def ^ func_def ^ type_def).map do |x|
+        [x].flatten
+      end
     end
 
     parser :module_or_material_file do
@@ -44,7 +50,7 @@ module Emfrp
           many1_fail(load_path, comma_separator).err(place, "definitions of include-files")
         ).map{|x| x == [] ? [] : x[0]}.name(:uses),
         many1(ws).err(place, "space before top-definitions"),
-        many_fail(module_top_def, many(ws)).err(place, "top definitions").name(:defs),
+        many_fail(module_top_def, many(ws)).map(&:flatten).err(place, "top definitions").name(:defs),
         many(ws),
         end_of_input.err("module-file", "valid end of file")
       ).map do |x|
@@ -80,7 +86,7 @@ module Emfrp
           many1_fail(load_path, comma_separator)
         ).to_nil.name(:uses),
         many1(ws),
-        many_fail(material_top_def, many(ws)).name(:defs),
+        many_fail(material_top_def, many(ws)).map(&:flatten).name(:defs),
         many(ws),
         end_of_input.err("module", "valid end of file")
       ).map do |x|
@@ -182,23 +188,51 @@ module Emfrp
       end
     end
 
-    parser :node_def do # -> NodeDef
+    parser :node_def do # -> [NodeDef]
       seq(
         symbol("node").name(:keyword),
         opt_fail(many1(ws) > init_def).to_nil.name(:init_exp),
         opt_fail(many1(ws) > from_def).to_nil.name(:params),
         many1(ws),
-        node_instance_name.err("node-def", "node name").name(:name),
-        opt_fail(
-          many(ws) > str(":") > many(ws) > type.err("node-def", "[Type] after :")
-        ).to_nil.name(:type),
+        pattern.name(:pattern),
         many(ws),
         str("="),
         many(ws),
         exp.err("node-def", "body").name(:exp),
         end_of_def.err("node-def", "valid end of node-def")
       ).map do |x|
-        NodeDef.new(x.to_h)
+        refs = x[:pattern].find_refs
+        if x[:pattern][:ref]
+          whole_name = x[:pattern][:ref]
+        else
+          whole_name = SSymbol.new(
+            :desc => "tmpNode" + x[:pattern].object_id.to_s,
+            :keyword => x[:pattern].deep_copy
+          )
+        end
+        whole_node = NodeDef.new(x.to_h, :type => x[:pattern][:type], :name => whole_name)
+        if refs.size == 0
+          []
+        else
+          gen = proc do |left_exp, ref|
+            c = Case.new(:pattern => x[:pattern].deep_copy, :exp => VarRef.new(:name => ref))
+            MatchExp.new(:exp => left_exp, :cases => [c])
+          end
+          child_nodes = refs.reject{|x| x == whole_name}.map do |ref|
+            init_exp = x[:init_exp] ? gen.call(x[:init_exp].deep_copy, ref) : nil
+            params = [NodeRef.new(:name => whole_name, :as => whole_name, :last => false)]
+            exp = gen.call(VarRef.new(:name => whole_name), ref)
+            NodeDef.new(
+              :keyword => x[:keyword],
+              :init_exp => init_exp,
+              :params => params,
+              :name => ref,
+              :type => nil,
+              :exp => exp
+            )
+          end
+          [whole_node] + child_nodes
+        end
       end
     end
 

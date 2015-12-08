@@ -16,7 +16,7 @@ module Emfrp
         @code = code
       end
     end
-    
+
     def initialize(include_dirs, output_io, main_path)
       @file_loader = FileLoader.new(include_dirs)
       @main_path = main_path
@@ -43,18 +43,22 @@ module Emfrp
     def append_def(uniq_id, def_str)
       file_name = "command-line-#{uniq_id}"
       @file_loader.add_to_loaded(file_name, def_str)
-      d = Parser.parse(def_str, file_name, Parser.oneline_file)
-      d = Parser.infix_convert(d, @infix_parser)
-      PreConvert.additional_convert(@top, d)
-      Typing.additional_typing(@top, d)
-      @top.add(d)
+      ds = Parser.parse(def_str, file_name, Parser.oneline_file)
+      ds.map!{|d| Parser.infix_convert(d, @infix_parser)}
+      ds.each do |d|
+        PreConvert.additional_convert(@top, d)
+        Typing.additional_typing(@top, d)
+        @top.add(d)
+      end
       return nil
     rescue Parser::ParsingError => err
       err.print_error(@output_io)
       return err.code
     rescue CompileError => err
       err.print_error(@output_io, @file_loader)
-      PreConvert.cancel(@top, d)
+      ds.each do |d|
+        PreConvert.cancel(@top, d)
+      end
       return err.code
     end
 

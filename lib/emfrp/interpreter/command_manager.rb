@@ -206,6 +206,24 @@ module Emfrp
             end
           end
 
+          command "assert-type" do |arg|
+            if arg =~ /^(.*)=>(.*)$/
+              if exp = str_to_exp($1.strip)
+                if exp[:typing].to_uniq_str == $2.strip
+                  next nil
+                else
+                  puts "Type Assertion failed".colorize(:red)
+                  puts "Description: #{$1.strip}"
+                  puts "Expected: #{$2.strip}"
+                  puts "Real:     #{exp[:typing].to_uniq_str}"
+                  next :assertion_error
+                end
+              end
+            end
+            puts "Error: invalid argument for :assert-type"
+            next :command_format_error
+          end
+
         end
       end
     end

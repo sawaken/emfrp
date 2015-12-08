@@ -132,6 +132,23 @@ module Emfrp
     end
   end
 
+  class Pattern < Syntax
+    def find_refs # -> [SSymbol]
+      res = []
+      if self[:ref]
+        res << self[:ref]
+      end
+      if self.has_key?(:args)
+        res = res + self[:args].map{|a| a.find_refs}.flatten
+      end
+      return res
+    end
+  end
+
+  AnyPattern = Class.new(Pattern)
+  ValuePattern = Class.new(Pattern)
+  IntegralPattern = Class.new(Pattern)
+
   Types = [
     :InputDef, :OutputDef, :DataDef, :FuncDef, :NodeDef, :TypeDef, :InfixDef,
     :PrimTypeDef, :PrimFuncDef, :CommandDef,
@@ -142,7 +159,6 @@ module Emfrp
 
     # Expression
     :MatchExp, :Case,
-    :AnyPattern, :ValuePattern, :IntegralPattern,
     :OperatorSeq,
     :FuncCall, :ValueConst, :SkipExp, :VarRef,
     :LiteralChar, :LiteralIntegral, :LiteralFloating,
