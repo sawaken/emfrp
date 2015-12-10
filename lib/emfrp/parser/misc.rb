@@ -37,6 +37,10 @@ module Emfrp
       tabspace | newline | commentout
     end
 
+    parser :ws_without_newline do
+      tabspace | commentout
+    end
+
     parser :commentout do # -> ()
       char("#") > many(non_newline) >> proc{|x|
         if x.size == 0 || x[0].item != "@"

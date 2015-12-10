@@ -205,6 +205,7 @@ module Emfrp
         ident_begin_lower.err("method_call", "invalid method name").name(:name),
         opt_fail(
           seq(
+            many(ws_without_newline),
             symbol("(").name(:keyword2),
             many(ws),
             many_fail(exp, comma_separator).name(:args),
@@ -245,6 +246,7 @@ module Emfrp
     parser :func_call do
       seq(
         func_name.name(:name),
+        many(ws_without_newline),
         symbol("(").name(:keyword1),
         many(ws),
         many1_fail(exp, comma_separator).name(:args),
@@ -289,7 +291,7 @@ module Emfrp
         tvalue_symbol.name(:name),
         opt_fail(
           seq(
-            many(ws),
+            many(ws_without_newline),
             str("("),
             many(ws),
             many_fail(exp, comma_separator).name(:args),

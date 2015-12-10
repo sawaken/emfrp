@@ -95,12 +95,18 @@ module Emfrp
           end
 
           command "ifuncs-ast" do
-            pp @top[:ifuncs]
+            @top[:dict][:ifunc_space].each do |k, v|
+              puts "#{k} =>"
+              pp v.get
+            end
             nil
           end
 
           command "itypes-ast" do
-            pp @top[:itypes]
+            @top[:dict][:itype_space].each do |k, v|
+              puts "#{k} =>"
+              pp v.get
+            end
             nil
           end
 
@@ -115,7 +121,7 @@ module Emfrp
                 puts "Description: #{arg}"
                 puts "Type: #{exp[:args][0][:typing].inspect.colorize(:green)}"
                 puts "Expected: #{Evaluater.value_to_s(val1)}"
-                puts "Real:     #{Evaluater.value_to_s(val2)}"
+                puts "Actual:   #{Evaluater.value_to_s(val2)}"
                 :assertion_error
               end
             else
@@ -155,7 +161,7 @@ module Emfrp
                     puts "Node Assertion failed".colorize(:red)
                     puts "Description: #{arg}"
                     puts "Expected: #{Evaluater.value_to_s(v2)}"
-                    puts "Real:     #{Evaluater.value_to_s(v1)}"
+                    puts "Actual:   #{Evaluater.value_to_s(v1)}"
                     next :assertion_error
                   end
                 else
@@ -197,7 +203,7 @@ module Emfrp
                 puts "Module Assertion failed".colorize(:red)
                 puts "Description: #{arg}"
                 puts "Expected: #{expected_output_vals.map{|x| Evaluater.value_to_s(x)}.join(", ")}"
-                puts "Real:     #{output_vals.map{|x| Evaluater.value_to_s(x)}.join(", ")}"
+                puts "Actual:   #{output_vals.map{|x| Evaluater.value_to_s(x)}.join(", ")}"
                 :assertion_error
               else
                 nil
@@ -217,7 +223,7 @@ module Emfrp
                   puts "Type Assertion failed".colorize(:red)
                   puts "Description: #{$1.strip}"
                   puts "Expected: #{$2.strip}"
-                  puts "Real:     #{exp[:typing].to_uniq_str}"
+                  puts "Actual:   #{exp[:typing].to_uniq_str}"
                   next :assertion_error
                 end
               end
@@ -226,32 +232,73 @@ module Emfrp
             next :command_format_error
           end
 
-          command "set-dummy-node" do |arg|
+          command "assert-error" do |arg|
+            if arg =~ /^\s*([a-z][a-zA-Z0-9_]*)\s*=>\s*(.*)$/
+              expected_error_code = $1
+              res = disable_io{ process_repl_line($2) }
+              if res.to_s == expected_error_code
+                next nil
+              else
+                puts "Error-Assertion error"
+                puts "Expected error-code: #{expected_error_code}"
+                puts "Actual error-code: #{res}"
+                next :assertion_error
+              end
+            else
+              puts "Error: invalid argument for :assert-error"
+              next :command_format_error
+            end
+          end
+
+          command "replace-node" do |arg|
             if arg =~ /^\s*([a-z][a-zA-Z0-9]*)\s*=>\s*([a-z][a-zA-Z0-9]*)\s*$/
               real_n_ln, dummy_n_ln = @top[:dict][:node_space][$1], @top[:dict][:node_space][$2]
               unless real_n_ln
                 puts "Error: Node `#{$1}' is undefined"
-                next :command_format_error
+                next :replace_node_err1
               end
               unless dummy_n_ln
                 puts "Error: Node `#{$2}' is undefined"
-                next :command_format_error
+                next :replace_node_err2
               end
               unless real_n_ln.get[:typing].to_uniq_str == dummy_n_ln.get[:typing].to_uniq_str
                 puts "Error: Types of Real-Node `#{$1}' and Dummy-Node `#{$2}' are different"
                 puts "#{$1} : #{real_n_ln.get[:typing].to_uniq_str}"
                 puts "#{$2} : #{dummy_n_ln.get[:typing].to_uniq_str}"
-                next :command_format_error
+                next :replace_node_err3
+              end
+              collect_deps = proc do |node|
+                if node.is_a?(NodeDef)
+                  [node] + node[:params].reject{|x| x[:last]}.map{|p|
+                    collect_deps.call(@top[:dict][:node_space][p[:name][:desc]].get)
+                  }.flatten
+                else
+                  [node]
+                end
+              end
+              c1 = collect_deps.call(dummy_n_ln.get).find{|x| x[:name] == real_n_ln.get[:name]}
+              c2 = collect_deps.call(real_n_ln.get).find{|x| x[:name] == dummy_n_ln.get[:name]}
+              unless c1 == nil && c2 == nil
+                puts "Error: Real-Node `#{$1}' and Dummy-Node `#{$2}' are on depending relation"
+                next :replace_node_err4
               end
               if real_n_ln.get[:init_exp] && !dummy_n_ln.get[:init_exp]
                 puts "Error: Dummy-Node `#{$2}' should have init-exp"
-                next :command_format_error
+                next :replace_node_err5
               end
               @node_replacement ||= {}
               @node_replacement[$1] = dummy_n_ln.get
               next nil
             else
               next :command_format_error
+            end
+          end
+
+          command "compile" do
+            require 'emfrp/convert/monofy'
+            Monofy.monofy(@top)
+            File.open(@main_path + ".c", 'w') do |f|
+
             end
           end
 

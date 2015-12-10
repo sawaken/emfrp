@@ -1,8 +1,9 @@
 require 'pp'
+require 'stringio'
 require "emfrp/parser/parser"
 require 'emfrp/pre_convert/pre_convert'
 require 'emfrp/typing/typing'
-require 'emfrp/convert/convert'
+#require 'emfrp/convert/convert'
 require 'emfrp/compile_error'
 require 'emfrp/interpreter/file_loader'
 require 'emfrp/interpreter/evaluater'
@@ -93,7 +94,7 @@ module Emfrp
     #-> true-like(abnormal-term) / false-like(normal-term)
     def process_repl_line(line)
       readline_id = proceed_readline_id()
-      case line
+      @last_status = case line
       when /^\s*(data|func|type)\s(.*)$/
         append_def(readline_id, line)
       when /^[a-z][a-zA-Z0-9]*\s*=(.*)$/
@@ -106,19 +107,27 @@ module Emfrp
           @command_manager.exec(@last_command, $1, readline_id)
         else
           puts "Error: there isn't a last-executed command"
-          return :recall_last_executed_error
+          :recall_last_executed_error
         end
       when ""
-        return nil
+        nil
       else
         if exp = str_to_exp(line)
           val = Evaluater.eval_exp(@top, exp)
           puts "#{Evaluater.value_to_s(val)} : #{exp[:typing].inspect.colorize(:green)}"
-          return nil
+          nil
         else
-          return :eval_error
+          :eval_error
         end
       end
+    end
+
+    def disable_io(&block)
+      output_io = @output_io
+      @output_io = StringIO.new
+      block.call
+    ensure
+      @output_io = output_io
     end
 
     def close
@@ -136,8 +145,18 @@ module Emfrp
     def completion_proc
       command_comp = @command_manager.completion_proc
       proc do |s|
+        token_candidates = lexical_tokens.select{|x| x.index(s) == 0}
         command_candidates = command_comp.call(s)
+        token_candidates + command_candidates
       end
+    end
+
+    def lexical_tokens
+      res = []
+      res += @top[:dict][:const_space].keys
+      res += @top[:dict][:data_space].keys
+      res += @top[:dict][:func_space].keys
+      return res
     end
 
     def pp(obj)

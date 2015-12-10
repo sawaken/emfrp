@@ -27,9 +27,14 @@ module Emfrp
     end
 
     class TypeDetermineError < CompileError
-      def initialize(undetermined_utype, factor)
+      def initialize(code, undetermined_utype, factor)
+        @code = code
         @utype = undetermined_utype
         @factor = factor
+      end
+
+      def code
+        @code
       end
 
       def print_error(output_io, file_loader)

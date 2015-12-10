@@ -170,6 +170,7 @@ module Emfrp
         end
       end
 
+
       def to_flatten_uniq_str
         if self.var?
           raise "error"

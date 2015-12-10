@@ -76,13 +76,19 @@ module Emfrp
             last_state[d] = eval_exp(top, d[:init_exp]) if d[:init_exp]
           end
         end
+        (top[:inputs] + top[:nodes]).each do |d|
+          eval_node(top, d, current_state, last_state, replacement)
+        end
         return top[:outputs].map do |x|
           eval_node(top, top[:dict][:node_space][x[:name][:desc]].get, current_state, last_state, replacement)
         end
       end
 
       def eval_node(top, node_def, current_state, last_state, replacement)
-        node_def = replacement[node_def[:name][:desc]] if replacement[node_def[:name][:desc]]
+        if replacement[node_def[:name][:desc]]
+          rep_node = replacement[node_def[:name][:desc]]
+          return eval_node(top, rep_node, current_state, last_state, replacement)
+        end
         return current_state[node_def] if current_state[node_def]
         env = {}
         node_def[:params].each do |param|
@@ -90,7 +96,11 @@ module Emfrp
           pn = top[:dict][:node_space][param[:name][:desc]].get
           if param[:last]
             raise "Assertion error" unless last_state[pn]
-            env[key] = last_state[pn]
+            if rep_node = replacement[param[:name][:desc]]
+              env[key] = last_state[rep_node]
+            else
+              env[key] = last_state[pn]
+            end
           else
             env[key] = eval_node(top, pn, current_state, last_state, replacement)
           end

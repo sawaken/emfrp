@@ -210,7 +210,14 @@ module Emfrp
             :keyword => x[:pattern].deep_copy
           )
         end
-        whole_node = NodeDef.new(x.to_h, :type => x[:pattern][:type], :name => whole_name)
+        whole_node = NodeDef.new(
+          :keyword => x[:keyword],
+          :init_exp => x[:init_exp],
+          :params => x[:params],
+          :exp => x[:exp],
+          :type => x[:pattern][:type],
+          :name => whole_name
+        )
         if refs.size == 0
           []
         else

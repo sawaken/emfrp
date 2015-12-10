@@ -1,26 +1,7 @@
-$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
-require 'emfrp'
-
-TARGETS = Dir.glob("./*.mfrp").map{|x| x =~ /^\.\/(.*).mfrp$/; $1}
-
-task :default => ["Std"] + TARGETS
-
-def exec_test(file_name)
-  puts "TESTING #{file_name}".colorize(:light_blue)
-  inter = Emfrp::Interpreter.new(Emfrp::IncludeDirs, STDOUT, file_name)
-  unless inter.exec_embeded_commands(true)
-    puts " => ok".colorize(:green)
-  else
-    puts " => fail".colorize(:red)
+task :default do
+  Dir.glob("[a-zA-Z0-9_]*") do |d|
+    Dir.chdir(d) do
+      sh "rake"
+    end if Dir.exist?(d)
   end
-end
-
-TARGETS.each do |t|
-  file t do
-    exec_test(t)
-  end
-end
-
-file "Std" do
-  exec_test("Std")
 end

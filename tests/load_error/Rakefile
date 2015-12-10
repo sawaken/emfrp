@@ -1,0 +1,29 @@
+$LOAD_PATH.unshift File.expand_path('../../../lib', __FILE__)
+require 'emfrp'
+require 'stringio'
+
+TARGETS = Dir.glob("./*.mfrp").map{|x| x =~ /^\.\/(.*).mfrp$/; $1}
+
+task :default => TARGETS
+
+TARGETS.each do |t|
+  file t do
+    puts "TESTING #{t}".colorize(:light_blue)
+    expected_code = File.open("#{t}.mfrp", 'r'){|f| f.gets[1..-1].chomp.strip.to_sym}
+    begin
+      out = StringIO.new
+      inter = Emfrp::Interpreter.new(Emfrp::IncludeDirs, out, t)
+      puts " => fail".colorize(:red)
+    rescue Emfrp::Interpreter::InterpreterError => err
+      if err.code == expected_code
+        puts " => ok".colorize(:green)
+      else
+        puts "Error code `#{expected_code}' is expected, but actual is `#{err.code}'."
+        out.string.each_line do |line|
+          print ">> " + line
+        end
+        puts " => fail".colorize(:red)
+      end
+    end
+  end
+end

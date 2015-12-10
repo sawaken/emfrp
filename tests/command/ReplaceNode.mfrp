@@ -1,0 +1,39 @@
+module ReplaceNodeCommand in x : Int out y use Std
+
+node a = x + 1
+node b = a + 1
+node c = b + 1
+
+node i = x + 2
+node j = i + 2
+node k = j + 2
+
+node z = 1.0
+
+node init[0] p = 1
+node q = 0
+
+node y = c
+
+#@ :assert-error replace_node_err1 =>
+#-   :replace-node hoge => b
+
+#@ :assert-error replace_node_err2 =>
+#-   :replace-node b => hoge
+
+#@ :assert-error replace_node_err3 =>
+#-   :replace-node b => z
+
+#@ :assert-error replace_node_err4 =>
+#-   :replace-node c => b
+
+#@ :assert-error replace_node_err4 =>
+#-   :replace-node a => b
+
+#@ :assert-error replace_node_err5 =>
+#-   :replace-node p => q
+
+#@ :replace-node b => j
+#@ :assert-module
+#-   0 => 5
+#@ : 1 => 6

@@ -38,6 +38,13 @@ infixl 7 *
 infixl 7 /
 infixl 6 +
 infixl 6 -
+infix 4 <
+infix 4 >
+infix 4 <=
+infix 4 >=
+infix 4 ==
+infix 4 !=
+infix 4 /=
 
 primfunc + (a : Int, b : Int) : Int = c{ a + b }, ruby{ a + b }
 primfunc - (a : Int, b : Int) : Int = c{ a - b }, ruby{ a - b }
@@ -49,6 +56,7 @@ primfunc <= (a : Int, b : Int) : Bool = c{ a <= b }, ruby{ a <= b ? [:True] : [:
 primfunc >= (a : Int, b : Int) : Bool = c{ a >= b }, ruby{ a >= b ? [:True] : [:False] }
 primfunc == (a : Int, b : Int) : Bool = c{ a == b }, ruby{ a == b ? [:True] : [:False] }
 primfunc != (a : Int, b : Int) : Bool = c{ a != b }, ruby{ a != b ? [:True] : [:False] }
+primfunc /= (a : Int, b : Int) : Bool = c{ a != b }, ruby{ a != b ? [:True] : [:False] }
 primfunc @- (a : Int) : Int = c{ -a }, ruby{ -a }
 primfunc @+ (a : Int) : Int = c{ +a }, ruby{ +a }
 
