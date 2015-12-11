@@ -85,7 +85,7 @@ module Emfrp
             PreConvert.err(:arg_num, "Wrong number of arguments (#{s}) for `#{name}':\n", syntax)
           end
         else
-          PreConvert.err("Undefined value-constructor `#{name}':\n", syntax)
+          PreConvert.err(:undef, "Undefined value-constructor `#{name}':\n", syntax)
         end
         alpha_convert(top, syntax.values, tbl)
       when FuncCall

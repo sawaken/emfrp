@@ -348,7 +348,7 @@ module Emfrp
         if x[:entity].size == 1
           exp = x[:entity].first
           exp[:parent_begin] = x[:keyword1]
-          exp[:parent_end] = x[:keyword1]
+          exp[:parent_end] = x[:keyword2]
           exp
         else
           ValueConst.new(
