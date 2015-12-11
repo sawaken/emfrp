@@ -116,7 +116,7 @@ module Emfrp
     def self.infix_convert(s, parser)
       case s
       when Syntax
-        new_s = s.class.new(s.map{|k, v| [k, infix_convert(v, parser)]}.to_h)
+        new_s = s.class[s.map{|k, v| [k, infix_convert(v, parser)]}]
         if s.is_a?(OperatorSeq)
           items = Items.new(new_s[:seq].map{|c| Item.new(c, nil)})
           res = parser.parse(items)
