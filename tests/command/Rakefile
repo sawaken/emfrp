@@ -1,1 +1,2 @@
-load File.expand_path('../../core/Rakefile', __FILE__)
+load File.expand_path('../../Rakefile.common', __FILE__)
+task :default => TARGETS

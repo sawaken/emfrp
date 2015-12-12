@@ -1,3 +1,6 @@
+require 'emfrp/compile/c/codegen'
+require 'emfrp/compile/graphviz/graphviz'
+
 module Emfrp
   class Interpreter
     class CommandManager
@@ -295,10 +298,20 @@ module Emfrp
           end
 
           command "compile" do
-            require 'emfrp/convert/monofy'
-            Monofy.monofy(@top)
-            File.open(@main_path + ".c", 'w') do |f|
+            File.open(@main_path + ".c", 'w') do |c_file|
+              File.open(@main_path + ".h", 'w') do |h_file|
+                C::Codegen.codegen(@top, c_file, h_file)
+              end
+            end
+          end
 
+          command "compile-dot" do |arg|
+            if arg.strip != ""
+              File.open(arg, "w") do |f|
+                Graphviz.compile(@top, f)
+              end
+            else
+              Graphviz.compile(@top, @output_io)
             end
           end
 

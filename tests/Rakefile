@@ -1,6 +1,7 @@
 task :default do
   Dir.glob("[a-zA-Z0-9_]*") do |d|
     Dir.chdir(d) do
+      puts "moved into directory `#{d}'"
       sh "rake"
     end if Dir.exist?(d)
   end

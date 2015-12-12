@@ -11,6 +11,8 @@ module Emfrp
         :const_space => {},
         :ifunc_space => {},
         :itype_space => {},
+        :used_datas => [],
+        :sorted_nodes => [],
       }
       (top[:inputs] + top[:nodes]).each{|x| set_dict(top[:dict], x)}
       (top[:funcs] + top[:pfuncs]).each{|x| set_dict(top[:dict], x)}
