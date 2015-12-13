@@ -35,7 +35,11 @@ module Emfrp
       while @update
         @update = false
         @datas.each do |d|
-          monofy_exp(d[:exp])
+          key = Link.new(d)
+          unless @top[:dict][:used_datas].find{|x| x == key}
+            monofy_exp(d[:exp])
+            @top[:dict][:used_datas] << key
+          end
         end
         @ifuncs.each do |ifunc|
           key = ifunc.typing_name_array + [ifunc.func_def[:name][:desc]]

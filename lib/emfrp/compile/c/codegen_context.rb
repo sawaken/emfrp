@@ -1,0 +1,153 @@
+module Emfrp
+  class CodegenContext
+    SymbolToStr = {
+      "!" => "_exclamation_",
+      "#" => "_hash_",
+      "$" => "_dollar_",
+      "%" => "_parcent_",
+      "&" => "_anpersand",
+      "*" => "_asterisk_",
+      "+" => "_plus_",
+      "." => "_dot_",
+      "/" => "_slash_",
+      "<" => "_lt_",
+      "=" => "_eq_",
+      ">" => "_gt_",
+      "?" => "_question_",
+      "@" => "_at_",
+      "\\" => "_backslash_",
+      "^" => "_caret_",
+      "|" => "_vertial_",
+      "-" => "_minus_",
+      "~" => "_tilde_"
+    }
+
+    def initialize(top)
+      @top = top
+      @global_vars = []
+      @funcs = []
+      @structs = []
+      @protos = []
+      @static_protos = []
+      @macros = []
+      @init_stmts = []
+    end
+
+    def func_name(name, ret_utype, arg_utypes)
+      case f = @top[:dict][:func_space][name]
+      when PrimTypeDef
+        f.func_name(self)
+      when TypeDef
+        key = ([exp] + exp[:args]).map{|x| x[:typing].to_uniq_str} + [name]
+        @top[:dict][:ifunc_space][key].get.func_name(self)
+      else
+        raise
+      end
+    end
+
+    def constructor_name(name, utype)
+      @top[:dict][:itype_space][utype.to_uniq_str].get[:tvalue].each do |tval|
+        if tval[:name] == name
+          return tval.constructor_name(self)
+        end
+      end
+      raise
+    end
+
+    def escape_name(name)
+      rexp = Regexp.new("[" + Regexp.escape(SymbolToStr.keys.join) + "]")
+      name.gsub(rexp, SymbolToStr)
+    end
+
+    def tdef(x)
+      case x
+      when Typing::UnionType
+        @top[:dict][:itype_space][utype.to_uniq_str].get
+      when Syntax
+        tdef(x[:typing])
+      else
+        raise "Assertion error"
+      end
+    end
+
+    def tref(x)
+      tdef(x).ref_name
+    end
+
+    def serial(key, id)
+      @serials ||= Hash.new{|h, k| h[k] = []}
+      @serials[key] << id unless @serials[key].find{|x| x == id}
+      return @serials[key].index{|x| x == id}
+    end
+
+    def uniq_id_gen
+      @uniq_ids ||= (0..1000).to_a
+      @uniq_ids.shift
+    end
+
+    def define_global_var(type_str, name_str, initial_value_str=nil)
+      @global_vars << "#{type_str} #{name_str}" + (initial_value_str ? if " = #{initial_value_str}" : "") + ";"
+    end
+
+    def define_macro(name_str, params, body_str)
+      @macros << "#define #{name_str}(#{params.join(", ")}) (#{body_str})"
+    end
+
+    def define_func(type_str, name_str, params, expose=false, &block)
+      elements = []
+      proc.call(elements)
+      deco = expose ? "" : "static "
+      proto = "#{deco}#{type_str} #{name_str}(#{params.map{|a, b| "#{a}"}.join(", ")});"
+      if expose
+        @protos << proto
+      else
+        @static_protos << proto
+      end
+      @funcs << Block.new("#{deco}#{type_str} #{name_str}(#{params.map{|a, b| "#{a} #{b}"}.join(", ")}) {", elements, "}")
+      return nil
+    end
+
+    def define_init_stmt(stmt)
+      @init_stmts << stmt
+    end
+
+    def define_struct(kind_str, name_str, var_name_str)
+      elements = []
+      proc.call(elements)
+      x = Block.new("#{kind_str} #{name_str}{", elements, "}#{var_name_str};")
+      if var_name_str
+        @structs << x
+        return nil
+      else
+        return x
+      end
+    end
+
+    def make_block(head_str, elements, foot_str)
+      Block.new(head_str, elements, foot_str)
+    end
+
+    class Block
+      T = (0..20).map{|i| "  " * i}
+      def initialize(head_str, elements, foot_str)
+        @head_str = head_str
+        @elements = elements
+        @foot_str = foot_str
+      end
+
+      def to_s(t=0)
+        res = ""
+        res << T[t] + @head_str + "\n"
+        @elements.each do |e|
+          case e
+          when Block
+            res << e.to_s(t+1) + "\n"
+          when String
+            res << T[t+1] + e + "\n"
+          end
+        end
+        res << T[t] + @foot_str
+      end
+    end
+  end
+end
