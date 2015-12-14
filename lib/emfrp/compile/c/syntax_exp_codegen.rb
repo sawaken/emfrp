@@ -29,14 +29,14 @@ module Emfrp
 
   class VarRef
     def codegen(ct, stmts)
-      ct.escape_name(self[:name][:desc])
+      self[:binder].get.var_name(ct, self[:name][:desc])
     end
   end
 
   class MatchExp
     def codegen(ct, stmts)
       vname = "_tmp%03d" % ct.uniq_id_gen
-      stmts << "#{ct.tref(self)} #{vname}"
+      stmts << "#{ct.tref(self)} #{vname};"
       left = self[:exp]
       if left.is_a?(VarRef)
         left_vname = left[:name][:desc]
@@ -47,7 +47,7 @@ module Emfrp
       end
       self[:cases].each_with_index do |c, i|
         then_stmts = []
-        cond_exps = pattern_to_cond_exps(ct, left_vname, then_stmts, c[:pattern])
+        cond_exps = pattern_to_cond_exps(ct, left_vname, then_stmts, c, c[:pattern])
         cond_exp = cond_exps.size == 0 ? "1" : cond_exps.join(" && ")
         if c[:exp].is_a?(SkipExp)
           then_stmts << "return 0;"
@@ -63,9 +63,10 @@ module Emfrp
       return vname
     end
 
-    def pattern_to_cond_exps(ct, receiver, stmts, pattern)
+    def pattern_to_cond_exps(ct, receiver, stmts, case_def, pattern)
       if pattern[:ref]
-        stmts << "#{ct.tref(pattern)} #{pattern[:ref][:desc]} = #{receiver};"
+        vname = case_def.var_name(ct, pattern[:ref][:desc])
+        stmts << "#{ct.tref(pattern)} #{vname} = #{receiver};"
       end
       case pattern
       when ValuePattern
@@ -74,15 +75,15 @@ module Emfrp
         accessor = type_def[:static] ? "." : "->"
         if type_def[:tvalues].size > 1
           tvalue_id = type_def[:tvalues].index{|x| x[:name] == pattern[:name]}
-          if type_def[:cstruct_name]
-            conds << "#{receiver}" + accessor + "tvalue_type == " + tvalue_id.to_s
-          else
+          unless type_def.enum?(ct)
             conds << "#{receiver} == #{tvalue_id}"
+          else
+            conds << "#{receiver}" + accessor + "tvalue_type == " + tvalue_id.to_s
           end
         end
         new_receiver = "#{receiver}" + accessor + "value." + pattern[:name][:desc]
         pattern[:args].each_with_index do |x, i|
-          conds += pattern_to_cond_exps(ct, new_receiver + ".member#{i}", stmts, x)
+          conds += pattern_to_cond_exps(ct, new_receiver + ".member#{i}", stmts, case_def, x)
         end
         return conds
       when IntegralPattern
@@ -92,4 +93,11 @@ module Emfrp
       end
     end
   end
+
+  class Case
+    def var_name(ct, name)
+      "pvar#{ct.serial(nil, self)}_" + ct.escape_name(name)
+    end
+  end
+
 end

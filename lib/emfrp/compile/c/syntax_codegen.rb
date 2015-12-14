@@ -9,8 +9,24 @@ module Emfrp
         v.get.constructor_gen(ct)
         v.get.marker_gen(ct)
       end
+      self[:inputs].each do |i|
+        i.init_func_gen(ct) if i[:init_exp]
+        i.node_var_gen(ct)
+      end
       self[:dict][:sorted_nodes].each do |n|
-        n.get.func_gen(ct)
+        node = n.get
+        node.func_gen(ct)
+        node.init_func_gen(ct) if node[:init_exp]
+        node.node_var_gen(ct)
+      end
+      self[:dict][:ifunc_space].each do |k, v|
+        v.get.codegen(ct)
+      end
+      self[:dict][:used_pfuncs].each do |v|
+        v.get.codegen(ct)
+      end
+      self[:dict][:sorted_datas].each do |v|
+        v.get.codegen(ct)
       end
     end
 
@@ -42,6 +58,7 @@ module Emfrp
 
   class TypeDef
     def struct_gen(ct)
+      return if enum?(ct)
       ct.define_struct("struct", struct_name(ct), nil) do |s1|
         s1 << "int tvalue_id;" if self[:tvalues].length > 1
         s1 << "int mark;" unless self[:static]
@@ -59,6 +76,7 @@ module Emfrp
     end
 
     def constructor_gen(ct)
+      return if enum?(ct)
       self[:tvalues].each_with_index do |tvalue, i|
         params = tvalue[:params].each_with_index.map do |param, i|
           [ct.tref(param), "member#{i}"]
@@ -81,6 +99,7 @@ module Emfrp
     end
 
     def marker_gen(ct)
+      return if enum?(ct)
       params = [[ref_name(ct), "x"], ["int", "mark"]]
       ct.define_func("void", marker_func_name(ct), params) do |x|
         x << "x->mark = mark;" unless self[:static]
@@ -103,16 +122,32 @@ module Emfrp
       end
     end
 
+    def enum?(ct)
+      self[:tvalues].all?{|x| x[:params].length == 0}
+    end
+
     def struct_name(ct)
-      self[:tvalues][0][:typing].to_flatten_uniq_str
+      unless enum?(ct)
+        self[:tvalues][0][:typing].to_flatten_uniq_str
+      else
+        raise
+      end
     end
 
     def marker_func_name(ct)
-      "mark_#{struct_name(ct)}"
+      unless enum?(ct)
+        "mark_#{struct_name(ct)}"
+      else
+        raise
+      end
     end
 
     def ref_name(ct)
-      "struct " + struct_name(ct) + (self[:static] ? "" : "*")
+      if enum?(ct)
+        "int"
+      else
+        "struct " + struct_name(ct) + (self[:static] ? "" : "*")
+      end
     end
 
     def memory_name(ct)
@@ -163,13 +198,13 @@ module Emfrp
     end
 
     def init_func_gen(ct)
-      ct.define_func(tref(self), init_func_name(ct), []) do |x|
-        x << "return #{self[:init_exp].codegen(ct, x)}"
+      ct.define_func(ct.tref(self), init_func_name(ct), []) do |x|
+        x << "return #{self[:init_exp].codegen(ct, x)};"
       end
     end
 
     def node_var_gen(ct)
-      ct.define_global_var(tref(self), "#{node_var_name}[2]")
+      ct.define_global_var(ct.tref(self), "#{node_var_name(ct)}[2]")
     end
 
     def init_func_name(ct)
@@ -187,17 +222,21 @@ module Emfrp
     def var_suffix(ct)
       "_nvar#{ct.serial(nil, self)}"
     end
+
+    def var_name(ct, name)
+      ct.escape_name(name)
+    end
   end
 
   class InputDef
     def init_func_gen(ct)
       ct.define_func(tref(self), init_func_name(ct), []) do |x|
-        x << "return #{self[:init_exp].codegen(ct, x)}"
+        x << "return #{self[:init_exp].codegen(ct, x)};"
       end
     end
 
     def node_var_gen(ct)
-      ct.define_global_var(tref(self), "#{node_var_name}[2]")
+      ct.define_global_var(ct.tref(self), "#{node_var_name(ct)}[2]")
     end
 
     def init_func_name(ct)
@@ -213,9 +252,9 @@ module Emfrp
     def codegen(ct)
       t = ct.tref(self)
       ct.define_global_var(t, var_name(ct))
-      ct.define_init_stmt(var_name(ct), "#{init_func_name}()")
+      ct.define_init_stmt(var_name(ct), "#{init_func_name(ct)}()")
       ct.define_func(t, init_func_name(ct), []) do |x|
-        x << "return #{self[:exp].codegen(ct, x)}"
+        x << "return #{self[:exp].codegen(ct, x)};"
       end
     end
 
@@ -226,17 +265,26 @@ module Emfrp
     def init_func_name(ct)
       "init_#{self[:name][:desc]}"
     end
+
+    def var_name(ct, name)
+      ct.escape_name(name)
+    end
   end
 
   class FuncDef
     def codegen(ct)
-      ct.funcdef(ct.tref(self), func_name(ct), self[:params].param_pair(ct)) do |x|
+      params = self[:params].map{|x| [ct.tref(x), x[:name][:desc]]}
+      ct.define_func(ct.tref(self), func_name(ct), params) do |x|
         x << "return #{self[:exp].codegen(ct, x)};"
       end
     end
 
     def func_name(ct)
       ct.escape_name(self[:name][:desc]) + "_" + ct.serial(self[:name][:desc], self).to_s
+    end
+
+    def var_name(ct, name)
+      "fvar#{ct.serial(nil, self)}_" + ct.escape_name(name)
     end
   end
 
@@ -249,13 +297,11 @@ module Emfrp
     end
 
     def func_name(ct)
-      self[:name][:desc]
+      ct.escape_name(self[:name][:desc])
     end
   end
 
   class ParamDef
-    def param_pair(ct)
-      [ct.tref(self), self[:name][:body]]
-    end
+
   end
 end

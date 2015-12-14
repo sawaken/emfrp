@@ -78,23 +78,32 @@ module Emfrp
     end
 
     def monofy_exp(exp, visited={})
-      case exp
-      when ValueConst
-        type_def = @top[:dict][:const_space][exp[:name][:desc]].get[:type_def].get
-        itype = IType.new(exp[:typing], type_def)
-        unless @itypes.find{|x| x == itype}
-          @itypes << itype
-          @update = true
+      if exp.is_a?(Syntax) && exp.has_key?(:typing)
+        case type_def = @top[:dict][:type_space][exp[:typing].typename].get
+        when TypeDef
+          itype = IType.new(exp[:typing], type_def)
+          unless @itypes.find{|x| x == itype}
+            @itypes << itype
+            @update = true
+          end
+        when PrimTypeDef
+          # do nothing
+        else
+          raise
         end
-        monofy_exp(exp[:args])
+      end
+      case exp
       when FuncCall
-        f = @top[:dict][:func_space][exp[:name][:desc]].get
-        if f.is_a?(FuncDef)
+        case f = @top[:dict][:func_space][exp[:name][:desc]].get
+        when FuncDef
           ifunc = IFunc.new(exp[:typing], exp[:args].map{|x| x[:typing]}, f)
           unless @ifuncs.find{|x| x == ifunc}
             @ifuncs << ifunc
             @update = true
           end
+        when PrimFuncDef
+          @top[:dict][:used_pfuncs] << Link.new(f)
+          @top[:dict][:used_pfuncs].uniq!
         end
         monofy_exp(exp[:args])
       when VarRef

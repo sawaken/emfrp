@@ -13,6 +13,7 @@ module Emfrp
         :itype_space => {},
         :sorted_datas => [],
         :sorted_nodes => [],
+        :used_pfuncs => [],
       }
       (top[:inputs] + top[:nodes]).each{|x| set_dict(top[:dict], x)}
       (top[:funcs] + top[:pfuncs]).each{|x| set_dict(top[:dict], x)}
