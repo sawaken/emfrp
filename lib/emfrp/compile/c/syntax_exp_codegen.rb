@@ -4,14 +4,14 @@ module Emfrp
   class FuncCall
     def codegen(ct, stmts)
       name = ct.func_name(self[:name][:desc], self[:typing], self[:args].map{|x| x[:typing]})
-      "#{name}(#{self[:args].map{|x| x.codegen(ct, stmts)}})"
+      "#{name}(#{self[:args].map{|x| x.codegen(ct, stmts)}.join(", ")})"
     end
   end
 
   class ValueConst
     def codegen(ct, stmts)
       name = ct.constructor_name(self[:name][:desc], self[:typing])
-      "#{name}(#{self[:args].map{|x| x.codegen(ct, stmts)}})"
+      "#{name}(#{self[:args].map{|x| x.codegen(ct, stmts)}.join(", ")})"
     end
   end
 
@@ -35,8 +35,8 @@ module Emfrp
 
   class MatchExp
     def codegen(ct, stmts)
-      name = "_tmp%03d" % ct.uniq_id_gen
-      stmts << "#{ct.tref(self)} #{name}"
+      vname = "_tmp%03d" % ct.uniq_id_gen
+      stmts << "#{ct.tref(self)} #{vname}"
       left = self[:exp]
       if left.is_a?(VarRef)
         left_vname = left[:name][:desc]
@@ -60,7 +60,7 @@ module Emfrp
           stmts << ct.make_block("else if (#{cond_exp}) {", then_stmts, "}")
         end
       end
-      return name
+      return vname
     end
 
     def pattern_to_cond_exps(ct, receiver, stmts, pattern)

@@ -1,14 +1,14 @@
 module Emfrp
-  class AllocRequrement
+  class AllocRequirement
     def initialize(top)
       @top = top
       @alloc_table = AllocTable.new(top)
     end
 
     def requirement
-      sorted_datas = nil
-      sorted_nodes = nil
-      init_nodes = sorted_nodes.select{|n| n[:init_exp]
+      sorted_datas = @top[:dict][:sorted_datas]
+      sorted_nodes = @top[:dict][:sorted_nodes]
+      init_nodes = sorted_nodes.select{|n| n[:init_exp]}
       max_amount = Alloc.empty
       max_amount = data_requirement(sorted_datas, max_amount)
       max_amount = node_init_requirement(init_nodes, max_amount, sorted_datas)
@@ -67,6 +67,10 @@ module Emfrp
     def exp_alloc(exp)
       @alloc_table.exp_alloc(exp)
     end
+
+    def sorted_nodes
+      @top[:nodes]
+    end
   end
 
   class AllocTable
@@ -120,7 +124,7 @@ module Emfrp
       end
     end
   end
-  
+
   class Alloc
     attr_reader :hash
     def initialize(hash)

@@ -22,8 +22,9 @@ module Emfrp
       "~" => "_tilde_"
     }
 
-    def initialize(top)
+    def initialize(top, alloc_table)
       @top = top
+      @alloc_table = alloc_table
       @global_vars = []
       @funcs = []
       @structs = []
@@ -33,25 +34,54 @@ module Emfrp
       @init_stmts = []
     end
 
+    def code_generate(c_output, h_output, name)
+      @protos.each do |x|
+        h_output.puts x.to_s
+      end
+      c_output.puts "#include \"#{name}.h\""
+      c_output.puts "/* Primitive functions (Macros) */"
+      @macros.each do |x|
+        c_output.puts x.to_s
+      end
+      c_output.puts "/* Global variables */"
+      @global_vars.each do |x|
+        c_output.puts x.to_s
+      end
+      c_output.puts "/* Data types */"
+      @structs.each do |x|
+        c_output.puts x.to_s
+      end
+      c_output.puts "/* Static prototypes */"
+      @static_protos.each do |x|
+        c_output.puts x.to_s
+      end
+      c_output.puts "/* Functions, Constructors, GCMarkers, etc... */"
+      @funcs.each do |x|
+        c_output.puts x.to_s
+      end
+      c_output.puts "/* Main-loop */"
+
+    end
+
     def func_name(name, ret_utype, arg_utypes)
-      case f = @top[:dict][:func_space][name]
-      when PrimTypeDef
+      case f = @top[:dict][:func_space][name].get
+      when PrimFuncDef
         f.func_name(self)
-      when TypeDef
-        key = ([exp] + exp[:args]).map{|x| x[:typing].to_uniq_str} + [name]
+      when FuncDef
+        key = [ret_utype, *arg_utypes].map(&:to_uniq_str) + [name]
         @top[:dict][:ifunc_space][key].get.func_name(self)
       else
-        raise
+        raise "Assertion error: unexpected func type #{f.class}"
       end
     end
 
     def constructor_name(name, utype)
-      @top[:dict][:itype_space][utype.to_uniq_str].get[:tvalue].each do |tval|
-        if tval[:name] == name
+      @top[:dict][:itype_space][utype.to_uniq_str].get[:tvalues].each do |tval|
+        if tval[:name][:desc] == name
           return tval.constructor_name(self)
         end
       end
-      raise
+      raise "Assertion error: #{name} is not found"
     end
 
     def escape_name(name)
@@ -62,7 +92,14 @@ module Emfrp
     def tdef(x)
       case x
       when Typing::UnionType
-        @top[:dict][:itype_space][utype.to_uniq_str].get
+        key = x.to_uniq_str
+        if @top[:dict][:type_space][key] && @top[:dict][:type_space][key].get.is_a?(PrimTypeDef)
+          @top[:dict][:type_space][key].get
+        elsif @top[:dict][:itype_space][key]
+          @top[:dict][:itype_space][key].get
+        else
+          raise "Assertion error: itype #{x.to_uniq_str} is undefined"
+        end
       when Syntax
         tdef(x[:typing])
       else
@@ -71,7 +108,7 @@ module Emfrp
     end
 
     def tref(x)
-      tdef(x).ref_name
+      tdef(x).ref_name(self)
     end
 
     def serial(key, id)
@@ -86,7 +123,7 @@ module Emfrp
     end
 
     def define_global_var(type_str, name_str, initial_value_str=nil)
-      @global_vars << "#{type_str} #{name_str}" + (initial_value_str ? if " = #{initial_value_str}" : "") + ";"
+      @global_vars << "#{type_str} #{name_str}" + (initial_value_str ? " = #{initial_value_str}" : "") + ";"
     end
 
     def define_macro(name_str, params, body_str)
@@ -115,7 +152,7 @@ module Emfrp
       elements = []
       proc.call(elements)
       x = Block.new("#{kind_str} #{name_str}{", elements, "}#{var_name_str};")
-      if var_name_str
+      if name_str
         @structs << x
         return nil
       else

@@ -61,6 +61,7 @@ module Emfrp
           end
         end
       end
+      @top[:dict][:sorted_datas] = @datas.map{|x| Link.new(x)}
     end
 
     def monofy_node(node, visited={})
@@ -72,6 +73,7 @@ module Emfrp
         node[:params].each do |param|
           monofy_node(@top[:dict][:node_space][param[:name][:desc]].get, visited)
         end
+        @top[:dict][:sorted_nodes] << Link.new(node)
       end
     end
 

@@ -4,7 +4,14 @@ require 'emfrp/compile/c/syntax_exp_codegen'
 module Emfrp
   class Top
     def codegen(ct)
-      ar = AllocRequrement.new(self)
+      self[:dict][:itype_space].each do |k, v|
+        v.get.struct_gen(ct)
+        v.get.constructor_gen(ct)
+        v.get.marker_gen(ct)
+      end
+      self[:dict][:sorted_nodes].each do |n|
+        n.get.func_gen(ct)
+      end
     end
 
     def memory_gen(ct, ar)
@@ -23,8 +30,8 @@ module Emfrp
           ct.define_init_stmt "#{d.node_var_name(ct)}[1] = #{d.init_func_name}();"
           t = ct.tdef(d)
           if t.is_a?(TypeDef)
-            pos = self[:sorted_nodes].index{|x| x[:name] == d[:name]}
-            ct.define_init_stmt "#{t.marker_func_name(ct)}(#{d.node_var_name(ct)}[1], #{pos + 1} + #{d[:die_point]});"
+            pos = self[:dict][:sorted_nodes].index{|x| x[:name] == d[:name]}
+            #ct.define_init_stmt "#{t.marker_func_name(ct)}(#{d.node_var_name(ct)}[1], #{pos + 1} + #{d[:die_point]});"
           end
         end
       end
@@ -41,7 +48,7 @@ module Emfrp
         s1 << ct.define_struct("union", nil, "value") do |s2|
           self[:tvalues].each_with_index do |tvalue, i|
             next if tvalue[:params].size == 0
-            s2 << ct.define_struct("struct", nil, tvalue.name(ct)) do |s3|
+            s2 << ct.define_struct("struct", nil, tvalue.struct_name(ct)) do |s3|
               tvalue[:params].each_with_index do |param, i|
                 s3 << "#{ct.tref(param)} member#{i};"
               end
@@ -56,13 +63,13 @@ module Emfrp
         params = tvalue[:params].each_with_index.map do |param, i|
           [ct.tref(param), "member#{i}"]
         end
-        ct.define_func(ct.tref(self[:typing]), tvalue.constructor_name(ct), params) do |s|
+        ct.define_func(ref_name(ct), tvalue.constructor_name(ct), params) do |s|
           while_stmts = []
           while_stmts << "#{memory_counter_name(ct)}++;"
           while_stmts << "#{memory_counter_name(ct)} %= #{memory_size_name(ct)};"
           mn = "#{memory_name(ct)}[#{memory_counter_name(ct)}].mark"
           while_stmts << "if (#{mn} < counter) { x = #{memory_name(ct)} + #{memory_counter_name(ct)}; break; }"
-          s << "#{ct.tref(self)} x;"
+          s << "#{ref_name(ct)} x;"
           s << ct.make_block("while (1) {", while_stmts, "}")
           s << "x->tvalue_id = #{i};" if self[:tvalues].length > 1
           tvalue[:params].each_with_index do |param, i|
@@ -74,15 +81,15 @@ module Emfrp
     end
 
     def marker_gen(ct)
-      params = [[ct.tref(self), "x"], ["int", "mark"]]
-      @funcs << Cfunc("void", marker_func_name(ct), params) do |x|
+      params = [[ref_name(ct), "x"], ["int", "mark"]]
+      ct.define_func("void", marker_func_name(ct), params) do |x|
         x << "x->mark = mark;" unless self[:static]
         accessor = self[:static] ? "." : "->"
         cases = []
         self[:tvalues].each_with_index do |tvalue, i|
           calls = []
           tvalue[:params].each_with_index do |param, i|
-            if tdef(param).is_a?(TypeDef)
+            if ct.tdef(param).is_a?(TypeDef)
               fn = tdef(param).marker_func_name
               calls << "#{fn}(x#{accessor}value.#{tvalue.struct_name(ct)}.member#{i}, mark);"
             end
@@ -97,10 +104,10 @@ module Emfrp
     end
 
     def struct_name(ct)
-      self[:typing].to_flatten_uniq_str
+      self[:tvalues][0][:typing].to_flatten_uniq_str
     end
 
-    def maker_func_name(ct)
+    def marker_func_name(ct)
       "mark_#{struct_name(ct)}"
     end
 
@@ -123,7 +130,7 @@ module Emfrp
 
   class TValue
     def constructor_name(ct)
-      self[:name][:desc] + "_" + ct.serial(self[:name][:desc], self)
+      self[:name][:desc] + "_" + ct.serial(self[:name][:desc], self).to_s
     end
 
     def struct_name(ct)
@@ -147,9 +154,9 @@ module Emfrp
 
   class NodeDef
     def func_gen(ct)
-      params = self[:params].map{|x| [ct.tref(x), x[:as][:desc]]}
-      output_param = [tref(self) + "*", "output"]
-      @funcs << Cfunc("int", node_func_name(ct), params + [output_param]) do |x|
+      params = self[:params].map{|x| [ct.tref(x), ct.escape_name(x[:as][:desc])]}
+      output_param = [ct.tref(self) + "*", "output"]
+      ct.define_func("int", node_func_name(ct), params + [output_param]) do |x|
         x << "*output = #{self[:exp].codegen(ct, x)};"
         x << "return 1;"
       end
@@ -175,6 +182,10 @@ module Emfrp
 
     def node_var_name(ct)
       "node_memory_#{self[:name][:desc]}"
+    end
+
+    def var_suffix(ct)
+      "_nvar#{ct.serial(nil, self)}"
     end
   end
 
@@ -225,7 +236,7 @@ module Emfrp
     end
 
     def func_name(ct)
-      ct.escape_name(self[:name][:desc]) + "_" + ct.serial(self[:name][:desc], self)
+      ct.escape_name(self[:name][:desc]) + "_" + ct.serial(self[:name][:desc], self).to_s
     end
   end
 

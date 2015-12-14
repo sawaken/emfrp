@@ -29,7 +29,7 @@ module Emfrp
     def deep_copy(x=self)
       case x
       when Syntax
-        x.class.new(x.map{|k, v| [k, deep_copy(v)]}.to_h)
+        x.class.new(Hash[x.map{|k, v| [k, deep_copy(v)]}])
       when Array
         x.map{|x| deep_copy(x)}
       else

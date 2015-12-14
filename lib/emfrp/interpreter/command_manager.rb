@@ -305,6 +305,11 @@ module Emfrp
             end
           end
 
+          command "c" do
+            Emfrp::Codegen.codegen(@top, @output_io, @output_io, "hoge")
+            next nil
+          end
+
           command "compile-dot" do |arg|
             if arg.strip != ""
               File.open(arg, "w") do |f|
