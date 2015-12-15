@@ -1,18 +1,14 @@
+#include "MostDistantPoint.h"
 #include <stdio.h>
 
-extern void ActivateMostDistantPoint();
-
-void Input(int* inX, int* inY)
-{
+void Input(int* inX, int* inY) {
   scanf("%d %d", inX, inY);
 }
 
-void Output(int* outX, int* outY)
-{
+void Output(int* outX, int* outY) {
   printf("%d %d\n", *outX, *outY);
 }
 
-int main()
-{
+int main() {
   ActivateMostDistantPoint();
 }

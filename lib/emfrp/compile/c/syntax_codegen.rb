@@ -12,7 +12,7 @@ module Emfrp
       self[:inputs].each do |i|
         if i[:init_exp]
           i.init_func_gen(ct)
-          ct.define_init_stmt "#{i.node_var_name(ct)}[1] = #{i.init_func_name(ct)}();"
+          ct.define_init_stmt "#{i.node_var_name(ct)}[last_side] = #{i.init_func_name(ct)}();"
         end
         i.node_var_gen(ct)
       end
@@ -22,10 +22,10 @@ module Emfrp
         node.node_var_gen(ct)
         if node[:init_exp]
           node.init_func_gen(ct)
-          ct.define_init_stmt "#{node.node_var_name(ct)}[1] = #{node.init_func_name(ct)}();"
+          ct.define_init_stmt "#{node.node_var_name(ct)}[last_side] = #{node.init_func_name(ct)}();"
           t = ct.tdef(node)
           if t.is_a?(TypeDef)
-            ct.define_init_stmt "#{t.marker_func_name(ct)}(#{node.node_var_name(ct)}[1], #{i + 1} + #{ar.life_point(node)});"
+            ct.define_init_stmt "#{t.marker_func_name(ct)}(#{node.node_var_name(ct)}[last_side], #{i + 1} + #{ar.life_point(node)});"
           end
         end
       end
