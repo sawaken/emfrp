@@ -29,8 +29,9 @@ module Emfrp
     end
 
     def monofy
+      visited = {}
       @top[:outputs].each do |x|
-        monofy_node(@top[:dict][:node_space][x[:name][:desc]].get)
+        monofy_node(@top[:dict][:node_space][x[:name][:desc]].get, visited)
       end
       while @update
         @update = false
@@ -64,7 +65,7 @@ module Emfrp
       @top[:dict][:sorted_datas] = @datas.map{|x| Link.new(x)}
     end
 
-    def monofy_node(node, visited={})
+    def monofy_node(node, visited)
       return if visited[node]
       visited[node] = true
       monofy_exp(node[:init_exp]) if node[:init_exp]

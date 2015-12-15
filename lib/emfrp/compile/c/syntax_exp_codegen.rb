@@ -21,6 +21,12 @@ module Emfrp
     end
   end
 
+  class LiteralFloating
+    def codegen(ct, stmts)
+      self[:entity][:desc]
+    end
+  end
+
   class LitaralChar
     def codegen(ct, stmts)
       self[:entity][:desc]
@@ -75,7 +81,7 @@ module Emfrp
         accessor = type_def[:static] ? "." : "->"
         if type_def[:tvalues].size > 1
           tvalue_id = type_def[:tvalues].index{|x| x[:name] == pattern[:name]}
-          unless type_def.enum?(ct)
+          if type_def.enum?(ct)
             conds << "#{receiver} == #{tvalue_id}"
           else
             conds << "#{receiver}" + accessor + "tvalue_type == " + tvalue_id.to_s

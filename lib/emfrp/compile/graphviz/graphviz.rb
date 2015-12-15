@@ -9,7 +9,7 @@ module Emfrp
         node = top[:dict][:node_space][n[:name][:desc]].get
         traverse(top, node, node_stmts, edge_stmts, true, visited)
       end
-      output_io << "digraph positioner {\n"
+      output_io << "digraph #{top[:module_name][:desc]} {\n"
       node_stmts.each do |s|
         output_io << "  #{s}\n"
       end

@@ -3,21 +3,31 @@ require 'emfrp/compile/c/syntax_exp_codegen'
 
 module Emfrp
   class Top
-    def codegen(ct)
+    def codegen(ct, ar)
       self[:dict][:itype_space].each do |k, v|
         v.get.struct_gen(ct)
         v.get.constructor_gen(ct)
         v.get.marker_gen(ct)
       end
       self[:inputs].each do |i|
-        i.init_func_gen(ct) if i[:init_exp]
+        if i[:init_exp]
+          i.init_func_gen(ct)
+          ct.define_init_stmt "#{i.node_var_name(ct)}[1] = #{i.init_func_name(ct)}();"
+        end
         i.node_var_gen(ct)
       end
-      self[:dict][:sorted_nodes].each do |n|
+      self[:dict][:sorted_nodes].each_with_index do |n, i|
         node = n.get
         node.func_gen(ct)
-        node.init_func_gen(ct) if node[:init_exp]
         node.node_var_gen(ct)
+        if node[:init_exp]
+          node.init_func_gen(ct)
+          ct.define_init_stmt "#{node.node_var_name(ct)}[1] = #{node.init_func_name(ct)}();"
+          t = ct.tdef(node)
+          if t.is_a?(TypeDef)
+            ct.define_init_stmt "#{t.marker_func_name(ct)}(#{node.node_var_name(ct)}[1], #{i + 1} + #{ar.life_point(node)});"
+          end
+        end
       end
       self[:dict][:ifunc_space].each do |k, v|
         v.get.codegen(ct)
@@ -28,17 +38,80 @@ module Emfrp
       self[:dict][:sorted_datas].each do |v|
         v.get.codegen(ct)
       end
+      memory_gen(ct, ar)
+      main_gen(ct, ar)
+      io_proto_gen(ct)
     end
 
     def memory_gen(ct, ar)
-
+      max_memory = ar.requirement()
+      max_memory.each do |t, i|
+        t = t.get
+        next if t[:static] || t.enum?(ct)
+        ct.define_global_var("struct #{t.struct_name(ct)}", "#{t.memory_name(ct)}[#{i}]")
+        ct.define_global_var("int", "#{t.memory_size_name(ct)}", "#{i}")
+        ct.define_global_var("int", "#{t.memory_counter_name(ct)}", "0")
+      end
+      ct.define_global_var("int", "Counter", "1")
+      ct.define_global_var("int", "NodeSize", "#{self[:dict][:sorted_nodes].size}")
+      ct.define_func("void", "refreshMark", []) do |x|
+        x << "int i;"
+        max_memory.each do |t, i|
+          t = t.get
+          mn = "#{t.memory_name(ct)}[i].mark"
+          stmts = []
+          stmts << "if (#{mn} < Counter) #{mn} = 0;"
+          stmts << "else #{mn} -= Counter - 1;"
+          x << ct.make_block("for (i = 0; i < #{t.memory_size_name(ct)}; i++) {", stmts, "}")
+        end
+      end
     end
 
     def main_gen(ct, ar)
-
+      ct.define_func("void", "Activate" + self[:module_name][:desc], [], :none) do |x|
+        x << "int current_side = 0, last_side = 1;"
+        ct.define_init_stmt "Counter = NodeSize + 1;"
+        ct.define_init_stmt "refreshMark();"
+        ct.init_stmts.each do |i|
+          x << i
+        end
+        stmts = []
+        stmts << "Counter = 1;"
+        inputs = self[:inputs].map{|x| "&#{x.node_var_name(ct)}[current_side]"}.join(", ")
+        stmts << "Input(#{inputs});"
+        self[:dict][:sorted_nodes].each do |n|
+          node = n.get
+          args = node[:params].map do |x|
+            pn = self[:dict][:node_space][x[:name][:desc]].get
+            "#{pn.node_var_name(ct)}[#{x[:last] ? "last_side" : "current_side"}]"
+          end
+          output_arg = "&#{node.node_var_name(ct)}[current_side]"
+          stmts << "#{node.node_func_name(ct)}(#{[args, *output_arg].join(", ")});"
+          t = ct.tdef(node)
+          if t.is_a?(TypeDef)
+            mark_val = "Counter + #{ar.life_point(node)}"
+            stmts << "#{t.marker_func_name(ct)}(#{node.node_var_name(ct)}[current_side], #{mark_val});"
+          end
+          stmts << "Counter++;"
+        end
+        outputs = self[:outputs].map do |x|
+          node = self[:dict][:node_space][x[:name][:desc]].get
+          "&#{node.node_var_name(ct)}[current_side]"
+        end
+        stmts << "Output(#{outputs.join(", ")});"
+        stmts << "refreshMark();"
+        stmts << "current_side ^= 1;"
+        stmts << "last_side ^= 1;"
+        x << ct.make_block("while (1) {", stmts, "}")
+      end
     end
 
-    def node_var_gen(ct)
+    def io_proto_gen(ct)
+      ct.define_proto("void", "Input", self[:inputs].map{|x| ct.tref(x) + "*"}, :extern)
+      ct.define_proto("void", "Output", self[:outputs].map{|x| ct.tref(x) + "*"}, :extern)
+    end
+
+    def node_init_stmt_gen(ct, ar)
       (self[:nodes] + self[:inputs]).each do |d|
         d.node_var_gen(ct)
         if d[:init_exp]
@@ -47,11 +120,11 @@ module Emfrp
           t = ct.tdef(d)
           if t.is_a?(TypeDef)
             pos = self[:dict][:sorted_nodes].index{|x| x[:name] == d[:name]}
-            #ct.define_init_stmt "#{t.marker_func_name(ct)}(#{d.node_var_name(ct)}[1], #{pos + 1} + #{d[:die_point]});"
+            ct.define_init_stmt "#{t.marker_func_name(ct)}(#{d.node_var_name(ct)}[1], #{pos + 1} + #{ar.life_point(n)});"
           end
         end
       end
-      ct.define_init_stmt "counter = #{top[:nodes].size + 1};"
+      ct.define_init_stmt "Counter = #{top[:nodes].size + 1};"
       ct.define_init_stmt << "refreshMark();"
     end
   end
@@ -86,7 +159,7 @@ module Emfrp
           while_stmts << "#{memory_counter_name(ct)}++;"
           while_stmts << "#{memory_counter_name(ct)} %= #{memory_size_name(ct)};"
           mn = "#{memory_name(ct)}[#{memory_counter_name(ct)}].mark"
-          while_stmts << "if (#{mn} < counter) { x = #{memory_name(ct)} + #{memory_counter_name(ct)}; break; }"
+          while_stmts << "if (#{mn} < Counter) { x = #{memory_name(ct)} + #{memory_counter_name(ct)}; break; }"
           s << "#{ref_name(ct)} x;"
           s << ct.make_block("while (1) {", while_stmts, "}")
           s << "x->tvalue_id = #{i};" if self[:tvalues].length > 1
@@ -284,7 +357,7 @@ module Emfrp
     end
 
     def var_name(ct, name)
-      "fvar#{ct.serial(nil, self)}_" + ct.escape_name(name)
+      ct.escape_name(name)
     end
   end
 

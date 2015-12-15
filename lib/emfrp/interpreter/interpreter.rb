@@ -8,6 +8,7 @@ require 'emfrp/compile_error'
 require 'emfrp/interpreter/file_loader'
 require 'emfrp/interpreter/evaluater'
 require 'emfrp/interpreter/command_manager'
+require 'emfrp/compile/c/codegen'
 
 module Emfrp
   class Interpreter
@@ -37,8 +38,8 @@ module Emfrp
       raise InterpreterError.new(err.code)
     end
 
-    def compile(c_output_io, h_output_io, print_log=false)
-
+    def compile(c_output_io, h_output_io, main_output_io, name, print_log=false)
+      Emfrp::Codegen.codegen(@top, c_output_io, h_output_io, main_output_io, name)
     end
 
     def append_def(uniq_id, def_str)

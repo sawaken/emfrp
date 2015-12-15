@@ -22,9 +22,8 @@ module Emfrp
       "~" => "_tilde_"
     }
 
-    def initialize(top, alloc_table)
+    def initialize(top)
       @top = top
-      @alloc_table = alloc_table
       @global_vars = []
       @funcs = []
       @structs = []
@@ -32,23 +31,29 @@ module Emfrp
       @static_protos = []
       @macros = []
       @init_stmts = []
+      @templates = []
     end
 
-    def code_generate(c_output, h_output, name)
+    def code_generate(c_output, h_output, main_output, name)
+      #  generate header-file
+      h_output << "#ifndef #{name.upcase}_H\n"
+      h_output << "#define #{name.upcase}_H\n\n"
       @protos.each do |x|
         h_output.puts x.to_s
       end
+      h_output << "\n#endif /* end of include guard */\n"
+      # generate library-file
       c_output.puts "#include \"#{name}.h\""
       c_output.puts "/* Primitive functions (Macros) */"
       @macros.each do |x|
         c_output.puts x.to_s
       end
-      c_output.puts "/* Global variables */"
-      @global_vars.each do |x|
-        c_output.puts x.to_s
-      end
       c_output.puts "/* Data types */"
       @structs.each do |x|
+        c_output.puts x.to_s
+      end
+      c_output.puts "/* Global variables */"
+      @global_vars.each do |x|
         c_output.puts x.to_s
       end
       c_output.puts "/* Static prototypes */"
@@ -59,8 +64,15 @@ module Emfrp
       @funcs.each do |x|
         c_output.puts x.to_s
       end
-      c_output.puts "/* Main-loop */"
+      # generate main-file
+      main_output << "#include \"#{name}.h\"\n\n"
+      main_output << "void Input(#{@top[:inputs].map{|x| "#{tref(x)}* #{x[:name][:desc]}"}.join(", ")}) {\n  /* Your code goes here... */\n}\n"
+      main_output << "void Output(#{@top[:outputs].map{|x| "#{tref(x)}* #{x[:name][:desc]}"}.join(", ")}) {\n  /* Your code goes here... */\n}\n"
+      main_output << "int main() {\n  Activate#{@top[:module_name][:desc]}();\n}\n"
+    end
 
+    def init_stmts
+      @init_stmts
     end
 
     def func_name(name, ret_utype, arg_utypes)
@@ -130,17 +142,30 @@ module Emfrp
       @macros << "#define #{name_str}(#{params.join(", ")}) (#{body_str})"
     end
 
-    def define_func(type_str, name_str, params, expose=false, &block)
+    def define_func(type_str, name_str, params, accessor=:static, with_proto=true, &block)
       elements = []
       proc.call(elements)
-      deco = expose ? "" : "static "
-      proto = "#{deco}#{type_str} #{name_str}(#{params.map{|a, b| "#{a}"}.join(", ")});"
-      if expose
-        @protos << proto
-      else
-        @static_protos << proto
+      case accessor
+      when :none then deco = ""
+      when :static then deco = "static "
       end
+      define_proto(type_str, name_str, params.map(&:first), accessor) if with_proto
       @funcs << Block.new("#{deco}#{type_str} #{name_str}(#{params.map{|a, b| "#{a} #{b}"}.join(", ")}) {", elements, "}")
+      return nil
+    end
+
+    def define_proto(type_str, name_str, param_types, accessor=:static)
+      case accessor
+      when :none then deco = ""
+      when :static then deco = "static "
+      when :extern then deco = "extern "
+      end
+      proto = "#{deco}#{type_str} #{name_str}(#{param_types.join(", ")});"
+      if accessor == :static || accessor == :extern
+        @static_protos << proto
+      else
+        @protos << proto
+      end
       return nil
     end
 

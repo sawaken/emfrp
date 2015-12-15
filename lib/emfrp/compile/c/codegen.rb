@@ -7,11 +7,12 @@ module Emfrp
   module Codegen
     extend self
 
-    def codegen(top, c_output, h_output, name)
+    def codegen(top, c_output, h_output, main_output, name)
       Monofy.monofy(top)
-      ct = CodegenContext.new(top, AllocRequirement.new(top))
-      top.codegen(ct)
-      ct.code_generate(c_output, h_output, name)
+      ct = CodegenContext.new(top)
+      ar = AllocRequirement.new(top)
+      top.codegen(ct, ar)
+      ct.code_generate(c_output, h_output, main_output, name)
     end
   end
 end

@@ -1,4 +1,3 @@
-require 'emfrp/compile/c/codegen'
 require 'emfrp/compile/graphviz/graphviz'
 
 module Emfrp
@@ -297,17 +296,25 @@ module Emfrp
             end
           end
 
-          command "compile" do
-            File.open(@main_path + ".c", 'w') do |c_file|
-              File.open(@main_path + ".h", 'w') do |h_file|
-                C::Codegen.codegen(@top, c_file, h_file)
+          command "compile" do |arg|
+            if arg.strip == ""
+              filename = @top[:module_name][:desc]
+              c_output_file = filename + ".c"
+              h_output_file = filename + ".h"
+              main_output_file = filename + "Main" + ".c"
+              File.open(c_output_file, 'w') do |c_file|
+                File.open(h_output_file, 'w') do |h_file|
+                  if File.exist?(main_output_file)
+                    @output_io.puts "#{main_output_file} already exists. Template code will be printed on console.".colorize(:green)
+                    compile(c_file, h_file, @output_io, filename)
+                  else
+                    File.open(main_output_file, 'w') do |main_file|
+                      compile(c_file, h_file, main_file, filename)
+                    end
+                  end
+                end
               end
             end
-          end
-
-          command "c" do
-            Emfrp::Codegen.codegen(@top, @output_io, @output_io, "hoge")
-            next nil
           end
 
           command "compile-dot" do |arg|
