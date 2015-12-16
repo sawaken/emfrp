@@ -38,6 +38,25 @@ module Emfrp
       Emfrp::Codegen.codegen(@top, c_output_io, h_output_io, main_output_io, name)
     end
 
+    def compile_default
+      filename = @top[:module_name][:desc]
+      c_output_file = filename + ".c"
+      h_output_file = filename + ".h"
+      main_output_file = filename + "Main" + ".c"
+      File.open(c_output_file, 'w') do |c_file|
+        File.open(h_output_file, 'w') do |h_file|
+          main_output_file += ".gen" if File.exist?(main_output_file)
+          File.open(main_output_file, 'w') do |main_file|
+            compile(c_file, h_file, main_file, filename)
+          end
+          return nil
+        end
+      end
+    rescue SystemCallError => err
+      puts err.inspect
+      return :file_write_error
+    end
+
     def append_def(uniq_id, def_str)
       file_name = "command-line-#{uniq_id}"
       @file_loader.add_to_loaded(file_name, def_str)

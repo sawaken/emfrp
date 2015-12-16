@@ -297,24 +297,7 @@ module Emfrp
           end
 
           command "compile" do |arg|
-            if arg.strip == ""
-              filename = @top[:module_name][:desc]
-              c_output_file = filename + ".c"
-              h_output_file = filename + ".h"
-              main_output_file = filename + "Main" + ".c"
-              File.open(c_output_file, 'w') do |c_file|
-                File.open(h_output_file, 'w') do |h_file|
-                  if File.exist?(main_output_file)
-                    @output_io.puts "#{main_output_file} already exists. Template code will be printed on console.".colorize(:green)
-                    compile(c_file, h_file, @output_io, filename)
-                  else
-                    File.open(main_output_file, 'w') do |main_file|
-                      compile(c_file, h_file, main_file, filename)
-                    end
-                  end
-                end
-              end
-            end
+            next compile_default()
           end
 
           command "compile-dot" do |arg|

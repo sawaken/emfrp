@@ -3,5 +3,16 @@ $LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
 
 require 'emfrp'
 
-file_loader = Emfrp::FileLoader.new(Emfrp::IncludeDirs)
-Emfrp.main(ARGV[0], file_loader, nil, nil)
+if ARGV[0] == "" || !File.exist?(ARGV[0])
+  puts "usage: emfrp <emfrp-module-file-path>"
+  eixt(1)
+end
+
+begin
+  inter = Emfrp::Interpreter.new(Emfrp::IncludeDirs, STDOUT, ARGV[0])
+  if inter.compile_default()
+    exit(1)
+  end
+rescue Emfrp::Interpreter::InterpreterError
+  exit(1)
+end
