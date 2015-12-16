@@ -24,6 +24,9 @@ TARGETS.each do |t|
         end
         puts " => fail".colorize(:red)
       end
+    rescue => err
+      puts err.inspect
+      puts " => fail".colorize(:red)
     end
   end
 end

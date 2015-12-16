@@ -1,5 +1,7 @@
 module Emfrp
   class FileLoader
+    FileLoadError = Class.new(StandardError)
+
     def initialize(include_dirs)
       @include_dirs = include_dirs
       @loaded_hash = {}
@@ -44,7 +46,7 @@ module Emfrp
           return @loaded_hash[path] = [src_str, full_path + ".mfrp"]
         end
       end
-      raise "Cannot load #{path_str}"
+      raise FileLoadError.new("Cannot load #{path_str}")
     end
   end
 end

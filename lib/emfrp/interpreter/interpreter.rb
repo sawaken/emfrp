@@ -117,10 +117,10 @@ module Emfrp
         append_def(readline_id, "data #{line}")
       when /^\s*\:([a-z\-]+)\s*(.*)$/
         @last_command = $1
-        @command_manager.exec($1, $2, readline_id)
+        command_exec($1, $2, readline_id)
       when /^\s*\:\s+(.*)$/
         if @last_command
-          @command_manager.exec(@last_command, $1, readline_id)
+          command_exec(@last_command, $1, readline_id)
         else
           puts "Error: there isn't a last-executed command"
           :recall_last_executed_error
@@ -136,6 +136,15 @@ module Emfrp
           :eval_error
         end
       end
+    end
+
+    def command_exec(command_name, arg, readline_id)
+      res = @command_manager.exec(command_name, arg, readline_id)
+      if res == :command_format_error
+        puts "Error: command_format_error"
+        @command_manager.print_usage(command_name, @output_io)
+      end
+      return res
     end
 
     def disable_io(&block)

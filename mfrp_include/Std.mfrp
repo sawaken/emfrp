@@ -17,11 +17,11 @@ type Tuple5[t0, t1, t2, t3, t4] = Tuple5(t0, t1, t2, t3, t4)
 
 #@ :set-func-doc
 #- fst("Tuple2") = "first element of Tuple2"
-func fst (t : Tuple2[a, b]) : a = t of Tuple2(x, y) -> x
+func fst (t) = t of (x, y) -> x
 
 #@ :set-func-doc
 #- snd("Tuple2") = "second element of Tuple2"
-func snd (t : Tuple2[a, b]) : b = t of Tuple2(x, y) -> y
+func snd (t) = t of (x, y) -> y
 
 # Pair
 # --------------------

@@ -11,6 +11,9 @@ def exec_test(file_name)
   else
     puts " => fail".colorize(:red)
   end
+rescue => err
+  puts err.inspect
+  puts " => fail".colorize(:red)
 end
 
 TARGETS.each do |t|

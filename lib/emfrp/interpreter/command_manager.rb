@@ -7,6 +7,12 @@ module Emfrp
         @interpreter = interpreter
         @command_names = []
         @command_tbl = {}
+        @command_desc_tbl = {}
+        @command_usage_tbl = {}
+        @command_example_tbl = {}
+        @command_desc_buf = []
+        @command_usage_buf = []
+        @command_example_buf = []
         instance_exec(&proc)
       end
 
@@ -14,7 +20,48 @@ module Emfrp
         names.each do |name|
           @command_names << ":" + name
           @command_tbl[name] = proc
+          @command_desc_tbl[name] = @command_desc_buf
+          @command_usage_tbl[name] = @command_usage_buf
+          @command_example_tbl[name] = @command_example_buf
+          @command_desc_buf, @command_usage_buf, @command_example_buf = [], [], []
         end
+      end
+
+      def desc(str)
+        @command_desc_buf << str
+      end
+
+      def usage(str)
+        @command_usage_buf << str
+      end
+
+      def example(str)
+        @command_example_buf << str
+      end
+
+      def print_usage(command_name, output_io)
+        if @command_tbl[command_name]
+          output_io.puts ":#{command_name}".colorize(:light_blue)
+          output_io.puts @command_desc_tbl[command_name].map{|x| "  " + x}.join("\n")
+          if @command_usage_tbl[command_name].size > 0
+            output_io.puts "  Usage:".colorize(:green)
+            output_io.puts @command_usage_tbl[command_name].map{|x| "    " + x}.join("\n")
+          end
+          if @command_example_tbl[command_name].size > 0
+            output_io.puts "  Example:".colorize(:green)
+            output_io.puts @command_example_tbl[command_name].map{|x| "    " + x}.join("\n")
+          end
+          return nil
+        else
+          return :command_not_found
+        end
+      end
+
+      def print_all_usages(output_io)
+        @command_tbl.keys.sort.each do |name|
+          print_usage(name, output_io)
+        end
+        return nil
       end
 
       def exec(command_name, arg, readline_id)
@@ -34,84 +81,65 @@ module Emfrp
 
       def self.make(interpreter)
         CommandManager.new(interpreter) do
-          command "func-type", "func-ast" do |arg, com|
-            if func_def = (@top[:funcs] + @top[:pfuncs]).find{|x| x[:name][:desc] == arg}
-              case com
-              when "func-type"
-                puts func_def[:params].map{|x| x[:typing].inspect}.join(", ") + " -> " + func_def[:typing].inspect
-              when "func-ast"
-                pp func_def
+
+          desc "Showing object type by specifying it's name."
+          example "data x = 1"
+          example ":t x"
+          command "t" do |arg|
+            name = arg.strip
+            if f = @top[:dict][:func_space][name]
+              puts "func #{name} : " + f.get[:params].map{|x| x[:typing].inspect}.join(", ") +
+              " -> " + f.get[:typing].inspect
+            end
+            if d = @top[:dict][:data_space][name]
+              puts "data #{name} : " + d.get[:typing].inspect
+            end
+            if t = @top[:dict][:type_space][name]
+              case t.get
+              when TypeDef
+                puts "Type #{name} : " + t.get[:tvalues][0][:typing].inspect
+              when PrimTypeDef
+                puts "PrimType #{name} : " + name
               end
-              nil
+            end
+            if c = @top[:dict][:const_space][name]
+              puts "constructor #{name} : " + c.get[:params].map{|x| x[:typing].inspect}.join(", ") +
+              " -> " + c.get[:typing].inspect
+            end
+            if n = @top[:dict][:node_space][name]
+              puts "node #{name} : " + n.get[:typing].inspect
+            end
+            next nil
+          end
+
+          desc "Showing internal AST by specifying element's name."
+          command "ast" do |arg|
+            name = arg.strip
+            if f = @top[:dict][:func_space][name]
+              pp f.get
+            elsif d = @top[:dict][:data_space][name]
+              pp d.get
+            elsif t = @top[:dict][:type_space][name]
+              pp t.get
+            elsif c = @top[:dict][:const_space][name]
+              pp c.get
+            elsif n = @top[:dict][:node_space][name]
+              pp n.get
+            elsif name == "top"
+              pp @top
+            elsif name == "ifuncs"
+              pp @top[:dict][:ifuncs_space].keys
+            elsif name == "itypes"
+              pp @top[:dict][:itypes_space].keys
             else
-              puts "Error: undefined function `#{arg}'"
-              :command_format_error
+              puts "Error: `#{name}' is not found"
+              next :target_not_found
             end
+            next nil
           end
 
-          command "data-type", "data-ast" do |arg, com|
-            if data_def = @top[:datas].find{|x| x[:name][:desc] == arg}
-              case com
-              when "data-type"
-                puts "#{arg} : " + data_def[:typing].to_uniq_str
-              when "data-ast"
-                pp data_def
-              end
-              nil
-            else
-              puts "Error: undefined data `#{arg}'"
-              :command_format_error
-            end
-          end
-
-          command "type-ast" do |arg|
-            type_def = @top[:types].find{|x| x[:type][:name][:desc] == arg}
-            ptype_def = @top[:ptypes].find{|x| x[:name][:desc] == arg}
-            if type_def || ptype_def
-              pp type_def || ptype_def
-              nil
-            else
-              puts "Error: undefined type `#{arg}`"
-              :command_format_error
-            end
-          end
-
-          command "node-type", "node-ast" do |arg, com|
-            if node_def = (@top[:nodes] + @top[:inputs]).find{|x| x[:name][:desc] == arg}
-              case com
-              when "node-type"
-                puts "#{arg} : " + node_def[:typing].to_uniq_str
-              when "node-ast"
-                pp node_def
-              end
-              nil
-            else
-              puts "Error: undefined node/input `#{arg}'"
-              :command_format_error
-            end
-          end
-
-          command "ast" do
-            pp @top
-            nil
-          end
-
-          command "ifuncs-ast" do
-            @top[:dict][:ifunc_space].each do |k, v|
-              puts "#{k} =>"
-              pp v.get
-            end
-            nil
-          end
-
-          command "itypes-ast" do
-            @top[:dict][:itype_space].each do |k, v|
-              puts "#{k} =>"
-              pp v.get
-            end
-            nil
-          end
-
+          desc "Testing two expression's equality."
+          usage ":assert-equals <expected-exp>, <testing-exp>"
           command "assert-equals" do |arg, c, rid|
             if exp = str_to_exp("Pair(#{arg})")
               val1 = Evaluater.eval_exp(@top, exp[:args][0])
@@ -127,19 +155,23 @@ module Emfrp
                 :assertion_error
               end
             else
-              puts "Error: invalid argument for :assert-equals"
               :command_format_error
             end
           end
 
+          desc "Executing all commands embeded on source-files."
           command "exec-embeded-commands" do
             exec_embeded_commands()
           end
 
+          desc "Define documentation about function. (in preparation)"
           command "set-func-doc" do |arg|
             nil
           end
 
+          desc "Testing node as function."
+          usage ":assert-node <node-name> <input-exp>* => <expected-output-exp>"
+          example ":assert-node mynode 1, 2 => 3"
           command "assert-node" do |arg|
             if arg =~ /^\s*([a-z][a-zA-Z0-9]*)\s+(.*)=>(.*)$/
               n = @top[:dict][:node_space][$1]
@@ -155,7 +187,7 @@ module Emfrp
                     v2 = Evaluater.eval_exp(@top, r_exp)
                   else
                     puts "Error: invalid expected-return-expression"
-                    next :command_format_error
+                    next :assert_node_error1
                   end
                   if v1 == v2
                     next nil
@@ -168,20 +200,20 @@ module Emfrp
                   end
                 else
                   puts "Error: invalid node-argument-expression"
-                  next :command_format_error
+                  next :assert_node_error2
                 end
               else
                 puts "Error: invalid node name #{$1}"
-                next :command_format_error
+                next :assert_node_error3
               end
             else
-              puts "Error: invalid argument for :assert-node"
-              puts "usage:"
-              puts "  :assert-node <Node-name> <arg-exp>* => <expected-return-exp>"
               next :command_format_error
             end
           end
 
+          desc "Testing whole-module by feeding inputs."
+          usage ":assert-module <input-exp>* => <expected-ouput-exp>*"
+          example ":assert-module 1, 2 => 2, 4"
           command "assert-module" do |arg|
             if arg =~ /^(.*)=>(.*)$/
               input_types = ["Unit", "Unit"] + @top[:inputs].map{|x| x[:typing].to_uniq_str}
@@ -191,7 +223,7 @@ module Emfrp
               output_exps = str_to_exp("(Unit, #{$2})", "(Unit, #{output_types.join(", ")})")
               if input_exps == nil || output_exps == nil
                 puts "Error: invalid expression"
-                next :command_format_error
+                next :assert_module_error1
               end
               # evaluate
               last_state = @current_state ? @current_state.clone : nil
@@ -211,11 +243,12 @@ module Emfrp
                 nil
               end
             else
-              puts "Error: invalid argument for :assert-module"
               :command_format_error
             end
           end
 
+          desc "Testing expression's type."
+          usage ":assert-type: <exp> => <type>"
           command "assert-type" do |arg|
             if arg =~ /^(.*)=>(.*)$/
               if exp = str_to_exp($1.strip)
@@ -230,10 +263,12 @@ module Emfrp
                 end
               end
             end
-            puts "Error: invalid argument for :assert-type"
             next :command_format_error
           end
 
+          desc "Testing that specified command finishes with specified error-code"
+          usage ":assert-error <expected-error-code> => <testing-command>"
+          example ":assert-error assertion_error => :assert-type 1 => Double"
           command "assert-error" do |arg|
             if arg =~ /^\s*([a-z][a-zA-Z0-9_]*)\s*=>\s*(.*)$/
               expected_error_code = $1
@@ -247,11 +282,13 @@ module Emfrp
                 next :assertion_error
               end
             else
-              puts "Error: invalid argument for :assert-error"
               next :command_format_error
             end
           end
 
+          desc "Replace one node to another like Stab."
+          desc "currently, this is only for testing (command-line assertion)."
+          usage ":replace-node <replaced-node-name> => <alternative-node-name>"
           command "replace-node" do |arg|
             if arg =~ /^\s*([a-z][a-zA-Z0-9]*)\s*=>\s*([a-z][a-zA-Z0-9]*)\s*$/
               real_n_ln, dummy_n_ln = @top[:dict][:node_space][$1], @top[:dict][:node_space][$2]
@@ -296,10 +333,18 @@ module Emfrp
             end
           end
 
-          command "compile" do |arg|
+          desc "Compiling module-file into c-program code."
+          desc "Target file-name is currently fixed..."
+          desc "(module-name is used and files are dumped on current-dir)"
+          usage ":compile"
+          command "compile" do
             next compile_default()
           end
 
+          desc "Compiling module-file into graphviz-source code (.dot file)."
+          desc "If file-name is given as a command-argument, the code is output to it."
+          desc "Otherwise, the code is output on console."
+          example ":compile-dot graph.dot"
           command "compile-dot" do |arg|
             if arg.strip != ""
               File.open(arg, "w") do |f|
@@ -308,6 +353,11 @@ module Emfrp
             else
               Graphviz.compile(@top, @output_io)
             end
+          end
+
+          desc "Showing usage of all commands."
+          command "commands" do
+            @command_manager.print_all_usages(@output_io)
           end
 
         end

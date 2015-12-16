@@ -3,9 +3,9 @@ $LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
 
 require 'emfrp'
 
-if ARGV[0] == "" || !File.exist?(ARGV[0])
+unless ARGV[0]
   puts "usage: emfrp <emfrp-module-file-path>"
-  eixt(1)
+  exit(1)
 end
 
 begin
@@ -14,5 +14,8 @@ begin
     exit(1)
   end
 rescue Emfrp::Interpreter::InterpreterError
+  exit(1)
+rescue Emfrp::FileLoader::FileLoadError => err
+  puts err.message
   exit(1)
 end
