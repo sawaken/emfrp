@@ -1,6 +1,6 @@
 # Emfrp
 
-Functional Programming with your microcomputer.
+Pure Functional Programming with your microcomputer.
 
 ## Installation
 
