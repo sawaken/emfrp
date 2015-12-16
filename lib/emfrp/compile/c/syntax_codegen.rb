@@ -182,7 +182,7 @@ module Emfrp
           calls = []
           tvalue[:params].each_with_index do |param, i|
             if ct.tdef(param).is_a?(TypeDef)
-              fn = tdef(param).marker_func_name
+              fn = ct.tdef(param).marker_func_name(ct)
               calls << "#{fn}(x#{accessor}value.#{tvalue.struct_name(ct)}.member#{i}, mark);"
             end
           end
