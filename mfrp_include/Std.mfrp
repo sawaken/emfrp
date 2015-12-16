@@ -60,6 +60,38 @@ primfunc /= (a : Int, b : Int) : Bool = c{ a != b }, ruby{ a != b ? [:True] : [:
 primfunc @- (a : Int) : Int = c{ -a }, ruby{ -a }
 primfunc @+ (a : Int) : Int = c{ +a }, ruby{ +a }
 
+primtype Double = c{ double }
+
+infixl 7 *.
+infixl 7 /.
+infixl 6 +.
+infixl 6 -.
+infix 4 <.
+infix 4 >.
+infix 4 <=.
+infix 4 >=.
+infix 4 ==.
+infix 4 !=.
+infix 4 /=.
+
+primfunc +. (a : Double, b : Double) : Double = c{ a + b }, ruby{ a + b }
+primfunc -. (a : Double, b : Double) : Double = c{ a - b }, ruby{ a - b }
+primfunc *. (a : Double, b : Double) : Double = c{ a * b }, ruby{ a * b }
+primfunc /. (a : Double, b : Double) : Double = c{ a / b }, ruby{ a / b }
+primfunc <. (a : Double, b : Double) : Bool = c{ a < b }, ruby{ a < b ? [:True] : [:False] }
+primfunc >. (a : Double, b : Double) : Bool = c{ a > b }, ruby{ a > b ? [:True] : [:False] }
+primfunc <=. (a : Double, b : Double) : Bool = c{ a <= b }, ruby{ a <= b ? [:True] : [:False] }
+primfunc >=. (a : Double, b : Double) : Bool = c{ a >= b }, ruby{ a >= b ? [:True] : [:False] }
+primfunc ==. (a : Double, b : Double) : Bool = c{ a == b }, ruby{ a == b ? [:True] : [:False] }
+primfunc !=. (a : Double, b : Double) : Bool = c{ a != b }, ruby{ a != b ? [:True] : [:False] }
+primfunc /=. (a : Double, b : Double) : Bool = c{ a != b }, ruby{ a != b ? [:True] : [:False] }
+primfunc @-. (a : Double) : Double = c{ -a }, ruby{ -a }
+primfunc @+. (a : Double) : Double = c{ +a }, ruby{ +a }
+
+
+primfunc doubleToInt(a : Double) : Int = c{ ((int)a) }, ruby{ a.to_i }
+primfunc intToDouble(a : Int) : Double = c{ ((double)a) }, ruby{ a.to_f }
+
 
 # Boolean Operations
 # --------------------

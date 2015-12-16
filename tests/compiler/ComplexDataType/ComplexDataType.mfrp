@@ -1,0 +1,14 @@
+module ComplexDataType
+in i : Int
+out out1, out2
+use Std
+
+node x = ((i, i), (i, i), (i, i))
+
+node y = {
+  ii = i.intToDouble
+  ((ii, ii), (ii, ii), (ii, ii))
+}
+
+node out1 = x of ((a, _), _, _) -> a
+node out2 = y of ((a, _), _, _) -> a
