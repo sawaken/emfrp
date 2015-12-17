@@ -17,7 +17,9 @@ module Emfrp
     end
 
     def self.monofy(top)
-      new(top).monofy
+      m = new(top)
+      m.monofy()
+      m.sort_nodes()
     end
 
     def initialize(top)
@@ -26,6 +28,42 @@ module Emfrp
       @itypes = []
       @ifuncs = []
       @update = false
+    end
+
+    def used_nodes
+      used = []
+      f = proc do |n|
+        used << n
+        n[:params].each do |p|
+          pn = @top[:dict][:node_space][p[:name][:desc]].get
+          if pn.is_a?(NodeDef)
+            if p[:last]
+              used << pn
+            else
+              f.call(pn)
+            end
+          end
+        end
+      end
+      @top[:outputs].each{|x| f.call(@top[:dict][:node_space][x[:name][:desc]].get)}
+      return used.uniq
+    end
+
+    def sort_nodes
+      evaluated = Hash[@top[:inputs].map{|x| [x[:name], true]}]
+      nodes = used_nodes()
+      que = nodes.select{|n| n[:params].all?{|p| p[:last] || evaluated[p[:name]]}}
+      res = []
+      until que.empty?
+        node = que.shift
+        next if evaluated[node[:name]]
+        evaluated[node[:name]] = true
+        que += nodes.select do |n|
+          n[:params].all?{|p| p[:last] || evaluated[p[:name]]}
+        end
+        res << node
+      end
+      @top[:dict][:sorted_nodes] = res.map{|x| Link.new(x)}
     end
 
     def monofy
@@ -74,7 +112,6 @@ module Emfrp
         node[:params].each do |param|
           monofy_node(@top[:dict][:node_space][param[:name][:desc]].get, visited)
         end
-        @top[:dict][:sorted_nodes] << Link.new(node)
       end
     end
 
