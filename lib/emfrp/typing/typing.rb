@@ -148,6 +148,8 @@ module Emfrp
         return e[:typing] = get_var_typing(top, e[:name], e[:binder].get)
       when SkipExp
         return e[:typing] = UnionType.new
+      when ParenthExp
+        return e[:typing] = typing_exp(top, e[:exp])
       else
         raise "Assertion error: unexpected exp type #{e.class}"
       end

@@ -19,6 +19,12 @@ module Emfrp
     end
   end
 
+  class ParenthExp
+    def codegen(ct, stmts)
+      self[:exp].codegen(ct, stmts)
+    end
+  end
+
   class LiteralIntegral
     def codegen(ct, stmts)
       self[:entity][:desc]

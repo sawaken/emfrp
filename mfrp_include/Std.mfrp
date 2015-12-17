@@ -14,6 +14,8 @@ type Tuple2[t0, t1] = Tuple2(t0, t1)
 type Tuple3[t0, t1, t2] = Tuple3(t0, t1, t2)
 type Tuple4[t0, t1, t2, t3] = Tuple4(t0, t1, t2, t3)
 type Tuple5[t0, t1, t2, t3, t4] = Tuple5(t0, t1, t2, t3, t4)
+type Tuple6[t0, t1, t2, t3, t4, t5] = Tuple6(t0, t1, t2, t3, t4, t5)
+type Tuple7[t0, t1, t2, t3, t4, t5, t6] = Tuple7(t0, t1, t2, t3, t4, t5, t6)
 
 #@ :set-func-doc
 #- fst("Tuple2") = "first element of Tuple2"
@@ -36,6 +38,7 @@ primtype Int = c{ int }
 
 infixl 7 *
 infixl 7 /
+infixl 7 %
 infixl 6 +
 infixl 6 -
 infix 4 <
@@ -50,6 +53,7 @@ primfunc + (a : Int, b : Int) : Int = c{ a + b }, ruby{ a + b }
 primfunc - (a : Int, b : Int) : Int = c{ a - b }, ruby{ a - b }
 primfunc * (a : Int, b : Int) : Int = c{ a * b }, ruby{ a * b }
 primfunc / (a : Int, b : Int) : Int = c{ a / b }, ruby{ a / b }
+primfunc % (a : Int, b : Int) : Int = c{ a % b }, ruby{ a % b }
 primfunc < (a : Int, b : Int) : Bool = c{ a < b }, ruby{ a < b ? [:True] : [:False] }
 primfunc > (a : Int, b : Int) : Bool = c{ a > b }, ruby{ a > b ? [:True] : [:False] }
 primfunc <= (a : Int, b : Int) : Bool = c{ a <= b }, ruby{ a <= b ? [:True] : [:False] }
@@ -114,3 +118,5 @@ infixr 2 ||
 primfunc && (a : Bool, b : Bool) : Bool = c{ a && b }, ruby{ a == [:True] && b == [:True] ? [:True] : [:False] }
 primfunc || (a : Bool, b : Bool) : Bool = c{ a || b }, ruby{ a == [:True] || b == [:True] ? [:True] : [:False] }
 primfunc @! (a : Bool) : Bool = c{ !a }, ruby{ a == [:True] ? [:False] : [:True] }
+
+primfunc boolToInt(a : Bool) : Int = c{ a }, ruby{ a == [:True] ? 1 : 0 }

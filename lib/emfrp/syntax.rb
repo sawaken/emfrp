@@ -159,7 +159,7 @@ module Emfrp
 
     # Expression
     :MatchExp, :Case,
-    :OperatorSeq,
+    :OperatorSeq, :ParenthExp,
     :FuncCall, :ValueConst, :SkipExp, :VarRef,
     :LiteralChar, :LiteralIntegral, :LiteralFloating,
   ]

@@ -38,6 +38,8 @@ module Emfrp
             end
           end
           return env[key]
+        when ParenthExp
+          return eval_exp(top, exp[:exp], env)
         when MatchExp
           left_val = eval_exp(top, exp[:exp], env)
           exp[:cases].each do |c|

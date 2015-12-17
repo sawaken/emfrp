@@ -123,7 +123,7 @@ module Emfrp
         many(ws),
         str("("),
         many(ws),
-        many1_fail(pattern, comma_separator).err("pattern", "invalide pattern").name(:args),
+        many1_fail(pattern, comma_separator).name(:args),
         many(ws),
         symbol(")").name(:keyword),
         opt_fail(
@@ -145,11 +145,11 @@ module Emfrp
       seq(
         symbol("(").name(:keyword1),
         many(ws),
-        pattern.err("tuple-pattern", "invalid child pattern").name(:arg_head),
+        pattern.name(:arg_head),
         many(ws),
-        str(",").err("tuple-pattern", "invalid child pattern"),
+        str(","),
         many(ws),
-        many1_fail(pattern, comma_separator).err("tuple-pattern", "invalid child pattern").name(:arg_tail),
+        many1_fail(pattern, comma_separator).name(:arg_tail),
         many(ws),
         symbol(")").name(:keyword2),
         opt_fail(
@@ -346,10 +346,11 @@ module Emfrp
         symbol(")").name(:keyword2)
       ).map do |x|
         if x[:entity].size == 1
-          exp = x[:entity].first
-          exp[:parent_begin] = x[:keyword1]
-          exp[:parent_end] = x[:keyword2]
-          exp
+          ParenthExp.new(
+            :exp => x[:entity].first,
+            :keyword1 => x[:keyword1],
+            :keyword2 => x[:keyword2]
+          )
         else
           ValueConst.new(
             :name => SSymbol.new(:desc => "Tuple" + x[:entity].size.to_s),
