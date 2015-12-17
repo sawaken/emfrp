@@ -8,7 +8,7 @@ begin
   inter = Emfrp::Interpreter.new(Emfrp::IncludeDirs, STDOUT, ARGV[0] || "Std")
   Readline.completion_proc = inter.completion_proc
   while true
-    input = Readline.readline("mfrpi:#{inter.current_readline_id}> ", true)
+    input = Readline.readline("emfrpi:#{inter.current_readline_id}> ", true)
     if input == nil
       inter.close()
       exit(0)
