@@ -3,16 +3,16 @@ module Emfrp
     def initialize(top)
       @top = top
       @alloc_table = AllocTable.new(top)
+      @sorted_nodes = @top[:dict][:sorted_nodes].map{|x| x.get}
     end
 
     def requirement
       sorted_datas = @top[:dict][:sorted_datas].map{|x| x.get}
-      sorted_nodes = @top[:dict][:sorted_nodes].map{|x| x.get}
-      init_nodes = sorted_nodes.select{|n| n[:init_exp]}
+      init_nodes = @sorted_nodes.select{|n| n[:init_exp]}
       max_amount = Alloc.empty
       max_amount = data_requirement(sorted_datas, max_amount)
       max_amount = node_init_requirement(init_nodes, max_amount, sorted_datas)
-      max_amount = node_loop_requirement(sorted_nodes, max_amount, init_nodes, sorted_datas)
+      max_amount = node_loop_requirement(max_amount, init_nodes, sorted_datas)
       return max_amount
     end
 
@@ -33,25 +33,25 @@ module Emfrp
       return max_amount
     end
 
-    def node_loop_requirement(sorted_nodes, max_amount, init_nodes, datas)
+    def node_loop_requirement(max_amount, init_nodes, datas)
       lrefs = init_nodes
       crefs = []
-      sorted_nodes.each_with_index do |n, i|
+      @sorted_nodes.each_with_index do |n, i|
         max_amount |= type_alloc_sum(datas + lrefs + crefs) & exp_alloc(n[:exp])
         crefs << n
         lrefs.reject! do |x|
-          i >= ref_pos_last(sorted_nodes, x)
+          i >= ref_pos_last(x)
         end
         crefs.reject! do |x|
-          i >= ref_pos_current(sorted_nodes, x)
+          i >= ref_pos_current(x)
         end
       end
       return max_amount
     end
 
-    def ref_pos_last(sorted_nodes, node)
+    def ref_pos_last(node)
       res = -1
-      sorted_nodes.each_with_index do |n, i|
+      @sorted_nodes.each_with_index do |n, i|
         if n[:params].any?{|param| param[:last] && param[:name] == node[:name]}
           res = i
         end
@@ -59,9 +59,9 @@ module Emfrp
       return res
     end
 
-    def ref_pos_current(sorted_nodes, node)
+    def ref_pos_current(node)
       res = -1
-      sorted_nodes.each_with_index do |n, i|
+      @sorted_nodes.each_with_index do |n, i|
         if n[:params].any?{|param| !param[:last] && param[:name] == node[:name]}
           res = i
         end
@@ -70,11 +70,10 @@ module Emfrp
     end
 
     def life_point(node)
-      sorted_nodes = @top[:dict][:sorted_nodes].map{|x| x.get}
-      self_position = sorted_nodes.index{|x| x == node}
-      distance_to_end = sorted_nodes.size - self_position
+      self_position = @sorted_nodes.index{|x| x == node}
+      distance_to_end = @sorted_nodes.size - self_position
       res = []
-      sorted_nodes.each_with_index do |x, i|
+      @sorted_nodes.each_with_index do |x, i|
         x[:params].each do |param|
           if param[:name] == node[:name]
             if param[:last]
@@ -101,10 +100,6 @@ module Emfrp
 
     def exp_alloc(exp)
       @alloc_table.exp_alloc(exp)
-    end
-
-    def sorted_nodes
-      @top[:nodes]
     end
   end
 
@@ -163,7 +158,7 @@ module Emfrp
           raise "Assertion error"
         end
       when ValueConst
-        args_alloc = exp[:args].map{|x| exp_alloc(x)}.inject(&:&)
+        args_alloc = exp[:args].map{|x| exp_alloc(x)}.inject(Alloc.empty, &:&)
         key = exp[:typing].to_uniq_str
         raise "Assertion error" unless @top[:dict][:itype_space][key]
         type_def = @top[:dict][:itype_space][key].get
@@ -177,9 +172,9 @@ module Emfrp
   end
 
   class Alloc
-    attr_reader :hash
+    attr_reader :h
     def initialize(hash)
-      @hash = hash
+      @h = hash
     end
 
     def self.empty
@@ -191,15 +186,15 @@ module Emfrp
     end
 
     def |(other)
-      Alloc.new self.hash.merge(other.hash){|k, v1, v2| [v1, v2].max}
+      Alloc.new self.h.merge(other.h){|k, v1, v2| [v1, v2].max}
     end
 
     def &(other)
-      Alloc.new self.hash.merge(other.hash){|k, v1, v2| v1 + v2}
+      Alloc.new self.h.merge(other.h){|k, v1, v2| v1 + v2}
     end
 
     def each(&block)
-      @hash.each(&block)
+      @h.each(&block)
     end
   end
 end

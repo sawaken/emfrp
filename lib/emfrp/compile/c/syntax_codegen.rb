@@ -24,8 +24,8 @@ module Emfrp
           node.init_func_gen(ct)
           ct.define_init_stmt "#{node.node_var_name(ct)}[last_side] = #{node.init_func_name(ct)}();"
           t = ct.tdef(node)
-          if t.is_a?(TypeDef)
-            ct.define_init_stmt "#{t.marker_func_name(ct)}(#{node.node_var_name(ct)}[last_side], #{i + 1} + #{ar.life_point(node)});"
+          if t.is_a?(TypeDef) && !t.enum?(ct)
+            ct.define_init_stmt "#{t.marker_func_name(ct)}(#{node.node_var_name(ct)}[last_side], #{ar.ref_pos_last(node) + 1});"
           end
         end
       end
@@ -58,6 +58,7 @@ module Emfrp
         x << "int i;"
         max_memory.each do |t, i|
           t = t.get
+          next if t[:static] || t.enum?(ct)
           mn = "#{t.memory_name(ct)}[i].mark"
           stmts = []
           stmts << "if (#{mn} < Counter) #{mn} = 0;"
@@ -88,7 +89,7 @@ module Emfrp
           output_arg = "&#{node.node_var_name(ct)}[current_side]"
           stmts << "#{node.node_func_name(ct)}(#{[args, *output_arg].join(", ")});"
           t = ct.tdef(node)
-          if t.is_a?(TypeDef)
+          if t.is_a?(TypeDef) && !t.enum?(ct)
             mark_val = "Counter + #{ar.life_point(node)}"
             stmts << "#{t.marker_func_name(ct)}(#{node.node_var_name(ct)}[current_side], #{mark_val});"
           end
@@ -109,23 +110,6 @@ module Emfrp
     def io_proto_gen(ct)
       ct.define_proto("void", "Input", self[:inputs].map{|x| ct.tref(x) + "*"}, :extern)
       ct.define_proto("void", "Output", self[:outputs].map{|x| ct.tref(x) + "*"}, :extern)
-    end
-
-    def node_init_stmt_gen(ct, ar)
-      (self[:nodes] + self[:inputs]).each do |d|
-        d.node_var_gen(ct)
-        if d[:init_exp]
-          d.init_func_gen(ct)
-          ct.define_init_stmt "#{d.node_var_name(ct)}[1] = #{d.init_func_name}();"
-          t = ct.tdef(d)
-          if t.is_a?(TypeDef)
-            pos = self[:dict][:sorted_nodes].index{|x| x[:name] == d[:name]}
-            ct.define_init_stmt "#{t.marker_func_name(ct)}(#{d.node_var_name(ct)}[1], #{pos + 1} + #{ar.life_point(n)});"
-          end
-        end
-      end
-      ct.define_init_stmt "Counter = #{top[:nodes].size + 1};"
-      ct.define_init_stmt << "refreshMark();"
     end
   end
 
@@ -181,7 +165,7 @@ module Emfrp
         self[:tvalues].each_with_index do |tvalue, i|
           calls = []
           tvalue[:params].each_with_index do |param, i|
-            if ct.tdef(param).is_a?(TypeDef)
+            if ct.tdef(param).is_a?(TypeDef) && !ct.tdef(param).enum?(ct)
               fn = ct.tdef(param).marker_func_name(ct)
               calls << "#{fn}(x#{accessor}value.#{tvalue.struct_name(ct)}.member#{i}, mark);"
             end

@@ -10,8 +10,12 @@ module Emfrp
 
   class ValueConst
     def codegen(ct, stmts)
-      name = ct.constructor_name(self[:name][:desc], self[:typing])
-      "#{name}(#{self[:args].map{|x| x.codegen(ct, stmts)}.join(", ")})"
+      if ct.tdef(self[:typing]).enum?(ct)
+        ct.tdef(self[:typing])[:tvalues].index{|t| t[:name] == self[:name]}.to_s
+      else
+        name = ct.constructor_name(self[:name][:desc], self[:typing])
+        "#{name}(#{self[:args].map{|x| x.codegen(ct, stmts)}.join(", ")})"
+      end
     end
   end
 
