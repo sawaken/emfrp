@@ -1,0 +1,23 @@
+$LOAD_PATH.unshift File.expand_path('../../../lib', __FILE__)
+require 'emfrp'
+
+task :default do
+  begin
+    puts "TESTING #{NAME}".colorize(:light_blue)
+    sh "../../../bin/emfrp #{NAME}.mfrp"
+    sh "cc -c #{NAME}.c"
+    sh "cc -c #{NAME}Main.c"
+    sh "cc #{NAME}.o #{NAME}Main.o -o #{NAME}"
+    sh "./#{NAME} < in.txt > actual_out.txt"
+    sh "rm #{NAME}Main.c.gen"
+    sh "rm #{NAME}.c"
+    sh "rm #{NAME}.h"
+    sh "rm #{NAME}.o"
+    sh "rm #{NAME}Main.o"
+    sh "rm #{NAME}"
+    sh "diff expected_out.txt actual_out.txt -u"
+    puts "  => ok".colorize(:green)
+  rescue
+    puts "  => fail".colorize(:red)
+  end
+end

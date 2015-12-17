@@ -1,0 +1,122 @@
+material Std
+
+type Maybe[a] = Just(a) | Nothing
+type static Opt[a] = Some(a) | None
+
+# Tuple
+# --------------------
+#@ :assert-equals 1, (1,2).fst
+#@ :assert-equals 2, (1,2).snd
+
+type Unit = Unit
+type Tuple1[t0] = Tuple1(t0)
+type Tuple2[t0, t1] = Tuple2(t0, t1)
+type Tuple3[t0, t1, t2] = Tuple3(t0, t1, t2)
+type Tuple4[t0, t1, t2, t3] = Tuple4(t0, t1, t2, t3)
+type Tuple5[t0, t1, t2, t3, t4] = Tuple5(t0, t1, t2, t3, t4)
+type Tuple6[t0, t1, t2, t3, t4, t5] = Tuple6(t0, t1, t2, t3, t4, t5)
+type Tuple7[t0, t1, t2, t3, t4, t5, t6] = Tuple7(t0, t1, t2, t3, t4, t5, t6)
+
+#@ :set-func-doc
+#- fst("Tuple2") = "first element of Tuple2"
+func fst (t) = t of (x, y) -> x
+
+#@ :set-func-doc
+#- snd("Tuple2") = "second element of Tuple2"
+func snd (t) = t of (x, y) -> y
+
+# Pair
+# --------------------
+type Pair[a] = Pair(a, a)
+
+# Arithmetic Operations
+# --------------------
+#@ :assert-equals 11, 1+2*3+4
+#@ :assert-equals -4, 1-2-3
+
+primtype Int = c{ int }
+
+infixl 7 *
+infixl 7 /
+infixl 7 %
+infixl 6 +
+infixl 6 -
+infix 4 <
+infix 4 >
+infix 4 <=
+infix 4 >=
+infix 4 ==
+infix 4 !=
+infix 4 /=
+
+primfunc + (a : Int, b : Int) : Int = c{ a + b }, ruby{ a + b }
+primfunc - (a : Int, b : Int) : Int = c{ a - b }, ruby{ a - b }
+primfunc * (a : Int, b : Int) : Int = c{ a * b }, ruby{ a * b }
+primfunc / (a : Int, b : Int) : Int = c{ a / b }, ruby{ a / b }
+primfunc % (a : Int, b : Int) : Int = c{ a % b }, ruby{ a % b }
+primfunc < (a : Int, b : Int) : Bool = c{ a < b }, ruby{ a < b ? [:True] : [:False] }
+primfunc > (a : Int, b : Int) : Bool = c{ a > b }, ruby{ a > b ? [:True] : [:False] }
+primfunc <= (a : Int, b : Int) : Bool = c{ a <= b }, ruby{ a <= b ? [:True] : [:False] }
+primfunc >= (a : Int, b : Int) : Bool = c{ a >= b }, ruby{ a >= b ? [:True] : [:False] }
+primfunc == (a : Int, b : Int) : Bool = c{ a == b }, ruby{ a == b ? [:True] : [:False] }
+primfunc != (a : Int, b : Int) : Bool = c{ a != b }, ruby{ a != b ? [:True] : [:False] }
+primfunc /= (a : Int, b : Int) : Bool = c{ a != b }, ruby{ a != b ? [:True] : [:False] }
+primfunc @- (a : Int) : Int = c{ -a }, ruby{ -a }
+primfunc @+ (a : Int) : Int = c{ +a }, ruby{ +a }
+
+primtype Double = c{ double }
+
+infixl 7 *.
+infixl 7 /.
+infixl 6 +.
+infixl 6 -.
+infix 4 <.
+infix 4 >.
+infix 4 <=.
+infix 4 >=.
+infix 4 ==.
+infix 4 !=.
+infix 4 /=.
+
+primfunc +. (a : Double, b : Double) : Double = c{ a + b }, ruby{ a + b }
+primfunc -. (a : Double, b : Double) : Double = c{ a - b }, ruby{ a - b }
+primfunc *. (a : Double, b : Double) : Double = c{ a * b }, ruby{ a * b }
+primfunc /. (a : Double, b : Double) : Double = c{ a / b }, ruby{ a / b }
+primfunc <. (a : Double, b : Double) : Bool = c{ a < b }, ruby{ a < b ? [:True] : [:False] }
+primfunc >. (a : Double, b : Double) : Bool = c{ a > b }, ruby{ a > b ? [:True] : [:False] }
+primfunc <=. (a : Double, b : Double) : Bool = c{ a <= b }, ruby{ a <= b ? [:True] : [:False] }
+primfunc >=. (a : Double, b : Double) : Bool = c{ a >= b }, ruby{ a >= b ? [:True] : [:False] }
+primfunc ==. (a : Double, b : Double) : Bool = c{ a == b }, ruby{ a == b ? [:True] : [:False] }
+primfunc !=. (a : Double, b : Double) : Bool = c{ a != b }, ruby{ a != b ? [:True] : [:False] }
+primfunc /=. (a : Double, b : Double) : Bool = c{ a != b }, ruby{ a != b ? [:True] : [:False] }
+primfunc @-. (a : Double) : Double = c{ -a }, ruby{ -a }
+primfunc @+. (a : Double) : Double = c{ +a }, ruby{ +a }
+
+
+primfunc doubleToInt(a : Double) : Int = c{ ((int)a) }, ruby{ a.to_i }
+primfunc intToDouble(a : Int) : Double = c{ ((double)a) }, ruby{ a.to_f }
+
+
+# Boolean Operations
+# --------------------
+#@ :assert-equals True, !False
+#@ :assert-equals False, !True
+#@ :assert-equals True, True && True
+#@ :assert-equals False, True && False
+#@ :assert-equals False, False && True
+#@ :assert-equals False, False && False
+#@ :assert-equals True, True || True
+#@ :assert-equals True, True || False
+#@ :assert-equals True, False || True
+#@ :assert-equals False, False || False
+
+type static Bool = False | True
+
+infixr 3 &&
+infixr 2 ||
+
+primfunc && (a : Bool, b : Bool) : Bool = c{ a && b }, ruby{ a == [:True] && b == [:True] ? [:True] : [:False] }
+primfunc || (a : Bool, b : Bool) : Bool = c{ a || b }, ruby{ a == [:True] || b == [:True] ? [:True] : [:False] }
+primfunc @! (a : Bool) : Bool = c{ !a }, ruby{ a == [:True] ? [:False] : [:True] }
+
+primfunc boolToInt(a : Bool) : Int = c{ a }, ruby{ a == [:True] ? 1 : 0 }

@@ -1,0 +1,25 @@
+module MostDistantPoint
+in
+  inX : Int,  inY : Int
+out
+  outX, outY
+use
+  Std
+
+#@ :assert-equals 2, distant2((1, 1), (2, 2))
+func distant2(pointA, pointB) = {
+  dx = pointA.fst - pointB.fst
+  dy = pointA.snd - pointB.snd
+  dx * dx + dy * dy
+}
+
+node init[(0, 0)] (outX, outY) as point = {
+  d1 = distant2((0, 0), point@last)
+  d2 = distant2((0, 0), (inX, inY))
+  if d1 < d2 then (inX, inY) else point@last
+}
+
+#@ :assert-module
+#-   0, 0 => 0, 0
+#@ : 1, 1 => 1, 1
+#@ : 0, 0 => 1, 1

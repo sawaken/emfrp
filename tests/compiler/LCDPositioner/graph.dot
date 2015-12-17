@@ -1,0 +1,31 @@
+digraph LCDPositioner {
+  pulse10ms [label = "pulse10ms : Bool", shape = "invhouse"];
+  pulse40msCount [label = "pulse40msCount : Int"];
+  pulse [label = "pulse : Tuple2[Bool, Int]"];
+  pulse40ms [label = "pulse40ms : Bool"];
+  right [label = "right : Bool", shape = "invhouse"];
+  left [label = "left : Bool", shape = "invhouse"];
+  dx [label = "dx : Int"];
+  y [label = "y : Int", style = filled, fillcolor = "#e4e4e4"];
+  down [label = "down : Bool", shape = "invhouse"];
+  up [label = "up : Bool", shape = "invhouse"];
+  dy [label = "dy : Int"];
+  pos [label = "pos : Tuple2[Int, Int]"];
+  x [label = "x : Int", style = filled, fillcolor = "#e4e4e4"];
+  pos -> x;
+  pulse40ms -> pos;
+  pulse -> pulse40ms;
+  pulse10ms -> pulse;
+  pulse40msCount -> pulse [style = dashed];
+  pulse -> pulse40msCount;
+  x -> pos [style = dashed];
+  dx -> pos;
+  right -> dx;
+  left -> dx;
+  y -> pos [style = dashed];
+  pos -> y;
+  dy -> pos;
+  down -> dy;
+  up -> dy;
+  pos -> pos [style = dashed];
+}

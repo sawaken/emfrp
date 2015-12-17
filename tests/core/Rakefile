@@ -1,0 +1,2 @@
+load File.expand_path('../../Rakefile.common', __FILE__)
+task :default => ["Std"] + TARGETS

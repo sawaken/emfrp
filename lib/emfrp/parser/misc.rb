@@ -25,12 +25,30 @@ module Emfrp
 
     parser :symbol do |s|
       str(s).map do |s|
-        Symbol.new(:desc => s.map(&:item).join, :tag => s[0].tag)
+        SSymbol.new(
+          :desc => s.map(&:item).join,
+          :start_pos => s[0].tag,
+          :end_pos => s[-1].tag
+        )
       end
     end
 
     parser :ws do # -> ()
-      tabspace | newline
+      tabspace | newline | commentout
+    end
+
+    parser :ws_without_newline do
+      tabspace | commentout
+    end
+
+    parser :commentout do # -> ()
+      char("#") > many(non_newline) >> proc{|x|
+        if x.size == 0 || x[0].item != "@"
+          ok(nil)
+        else
+          fail
+        end
+      }
     end
 
     parser :newline do #-> ()
@@ -53,65 +71,114 @@ module Emfrp
       many(tabspace) > newline > many(ws)
     end
 
-    parser :ident_begin_lower do # -> Symbol
-      seq(lower_alpha, many(lower_alpha | upper_alpha | digit | char("_"))).map do |xs|
-        items = [xs[0]] + xs[1]
-        Symbol.new(:desc => items.map{|i| i.item}.join, :tag => xs[0].tag)
+    parser :ident_begin_lower do # -> SSymbol
+      seq(
+        lower_alpha.name(:head),
+        many(lower_alpha | upper_alpha | digit | char("_")).name(:tail)
+      ).map do |x|
+        items = [x[:head]] + x[:tail]
+        SSymbol.new(
+          :desc => items.map{|i| i.item}.join,
+          :start_pos => items[0].tag,
+          :end_pos => items[-1].tag
+        )
       end
     end
 
-    parser :ident_begin_upper do # -> Symbol
-      seq(upper_alpha, many(lower_alpha | upper_alpha | digit | char("_"))).map do |xs|
-        items = [xs[0]] + xs[1]
-        Symbol.new(:desc => items.map{|i| i.item}.join, :tag => xs[0].tag)
+    parser :ident_begin_upper do # -> SSymbol
+      seq(
+        upper_alpha.name(:head),
+        many(lower_alpha | upper_alpha | digit | char("_")).name(:tail)
+      ).map do |x|
+        items = [x[:head]] + x[:tail]
+        SSymbol.new(
+          :desc => items.map{|i| i.item}.join,
+          :start_pos => items[0].tag,
+          :end_pos => items[-1].tag
+        )
       end
     end
 
-    parser :positive_integer do # -> Symbol
-      seq(pdigit, many(digit)).map do |x|
-        Symbol.new(:desc => ([x[0]] + x[1]).map{|i| i.item}.join.to_s, :tag => x[0].tag)
+    parser :positive_integer do # -> SSymbol
+      seq(
+        pdigit.name(:head),
+        many(digit).name(:tail)
+      ).map do |x|
+        items = [x[:head]] + x[:tail]
+        SSymbol.new(
+          :desc => items.map{|i| i.item}.join,
+          :start_pos => items[0].tag,
+          :end_pos => items[-1].tag
+        )
       end
     end
 
-    parser :cfunc_name do # -> Symbol
+    parser :zero_integer do # -> SSymbol
+      symbol("0")
+    end
+
+    parser :digit_symbol do # -> SSymbol
+      ("0".."9").map{|c| symbol(c)}.inject(&:|)
+    end
+
+    parser :cfunc_name do # -> SSymbol
       ident_begin_lower | ident_begin_upper
     end
 
-    parser :func_name do # -> Symbol
+    parser :func_name do # -> SSymbol
       ident_begin_lower
     end
 
-    parser :data_name do # -> Symbol
+    parser :data_name do # -> SSymbol
       ident_begin_lower
     end
 
-    parser :method_name do # -> Symbol
+    parser :method_name do # -> SSymbol
       operator | ident_begin_lower
     end
 
-    parser :var_name do # -> Symbol
+    parser :var_name do # -> SSymbol
       ident_begin_lower
     end
 
-    parser :node_instance_name do # -> Symbol
+    parser :node_instance_name do # -> SSymbol
       ident_begin_lower
     end
 
-    parser :var_name_allow_last do # -> Symbol
-      (ident_begin_lower < str("@last")).map{|s| s.update(:desc => s[:desc] + "@last")} | ident_begin_lower
+    parser :var_name_allow_last do # -> SSymbol
+      var_with_last | ident_begin_lower
     end
 
-    parser :operator do # -> Symbol
-      usable = "!#$%&*+./<=>?@\\^|-~".chars.map{|c| char(c)}.inject(&:|)
-      ng = ["..", ":", "::", "=", "\\", "|", "<-", "->", "@", "~", "=>", "."]
-      many1(usable) >> proc{|cs|
-        token = cs.map{|i| i.item}.join
+    parser :var_with_last do # -> SSymbol
+      seq(
+        ident_begin_lower.name(:prefix),
+        symbol("@last").name(:suffix)
+      ).map do |x|
+        SSymbol.new(x.to_h, :desc => x[:prefix][:desc] + x[:suffix][:desc])
+      end
+    end
+
+    OPUsable = "!#$%&*+./<=>?@\\^|-~"
+
+    parser :operator do # -> SSymbol
+      usable = OPUsable.chars.map{|c| char(c)}.inject(&:|)
+      ng = ["..", ":", "::", "=", "\\", "|", "<-", "->", "@", "~", "=>", ".", "#", "@@"]
+      many1(usable) >> proc{|items|
+        token = items.map{|i| i.item}.join
         if ng.include?(token)
           fail
         else
-          ok(Symbol.new(:desc => token, :tag => cs[0].tag))
+          ok(SSymbol.new(
+            :desc => token,
+            :start_pos => items[0].tag,
+            :end_pos => items[-1].tag
+          ))
         end
       }
+    end
+
+    parser :operator_general do # -> SSymbol
+      operator ^ (char("`") > func_name < char("`"))
     end
   end
 end
