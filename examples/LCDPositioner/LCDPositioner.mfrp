@@ -1,0 +1,30 @@
+module LCDPositioner
+in
+  up : Bool,
+  down : Bool,
+  left : Bool,
+  right : Bool,
+  pulse10ms : Bool
+out
+  x, y
+use
+  Std
+
+node dy = down.boolToInt - up.boolToInt
+node dx = right.boolToInt - left.boolToInt
+
+node init[(False, 0)] (pulse40ms, pulse40msCount) as pulse = {
+  c = (pulse40msCount@last + pulse10ms.boolToInt) % 4
+  (c == 0 && pulse10ms, c)
+}
+
+node init[(0,0)] (x, y) as pos =
+  if pulse40ms then (x@last + dx, y@last + dy) else pos@last
+
+
+#@ :assert-module
+#-   True, False, False, False, True => 0, 0
+#@ : True, False, False, False, True => 0, 0
+#@ : True, False, False, False, True => 0, 0
+#@ : True, False, False, False, True => 0, -1
+#@ : True, False, False, False, True => 0, -1

@@ -1,0 +1,12 @@
+digraph MostDistantPoint {
+  inX [label = "inX : Int", shape = "invhouse"];
+  inY [label = "inY : Int", shape = "invhouse"];
+  point [label = "point : Tuple2[Int, Int]"];
+  outX [label = "outX : Int", style = filled, fillcolor = "#e4e4e4"];
+  outY [label = "outY : Int", style = filled, fillcolor = "#e4e4e4"];
+  point -> outX;
+  inX -> point;
+  inY -> point;
+  point -> point [style = dashed];
+  point -> outY;
+}

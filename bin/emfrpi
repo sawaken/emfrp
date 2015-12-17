@@ -1,0 +1,24 @@
+#!/usr/bin/env ruby
+$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+
+require 'emfrp'
+require 'readline'
+
+begin
+  inter = Emfrp::Interpreter.new(Emfrp::IncludeDirs, STDOUT, ARGV[0] || "Std")
+  Readline.completion_proc = inter.completion_proc
+  while true
+    input = Readline.readline("emfrpi:#{inter.current_readline_id}> ", true)
+    if input == nil
+      inter.close()
+      exit(0)
+    else
+      inter.process_repl_line(input)
+    end
+  end
+rescue Emfrp::Interpreter::InterpreterError
+  exit(1)
+rescue Emfrp::FileLoader::FileLoadError => err
+  puts err.message
+  exit(1)
+end

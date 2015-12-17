@@ -1,31 +1,27 @@
 # Emfrp
 
-TODO: Write a gem description
+Pure Functional Programming with your microcomputer.
+
+# Requirement
+
+* Ruby2.0 or later (and it's Gem client)
 
 ## Installation
-
-Add this line to your application's Gemfile:
-
-```ruby
-gem 'emfrp'
+You can get executables via RubyGems.
+```sh
+$ gem install emfrp
 ```
 
-And then execute:
+# Command-line-interpreter (REPL)
+```sh
+$ emfrpi
+```
 
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install emfrp
+# Compiler
+```sh
+$ emfrp <src-file>
+```
 
 ## Usage
 
-TODO: Write usage instructions here
-
-## Contributing
-
-1. Fork it ( https://github.com/[my-github-username]/emfrp/fork )
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create a new Pull Request
+In prepraration...

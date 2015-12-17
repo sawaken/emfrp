@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+
+require 'emfrp'
+
+unless ARGV[0]
+  puts "usage: emfrp <emfrp-module-file-path>"
+  exit(1)
+end
+
+begin
+  inter = Emfrp::Interpreter.new(Emfrp::IncludeDirs, STDOUT, ARGV[0])
+  if inter.compile_default()
+    exit(1)
+  end
+rescue Emfrp::Interpreter::InterpreterError
+  exit(1)
+rescue Emfrp::FileLoader::FileLoadError => err
+  puts err.message
+  exit(1)
+end

@@ -15,7 +15,7 @@ module Emfrp
 
     parser :if_exp do
       seq(
-        key("if").name(:tag),
+        symbol("if").name(:keyword),
         many1(ws),
         exp.err("if-exp", "valid conditional exp").name(:cond),
         many1(ws),
@@ -27,12 +27,18 @@ module Emfrp
         many1(ws),
         exp.err("if-exp", "valid then exp").name(:else),
       ).map do |x|
-        IfExp.new(x.to_h)
+        true_sym = SSymbol.new(:desc => "True")
+        true_pat = ValuePattern.new(:name => true_sym, :args => [], :ref => nil, :type => nil)
+        true_case = Case.new(:pattern => true_pat, :exp => x[:then])
+        false_sym = SSymbol.new(:desc => "False")
+        false_pat = ValuePattern.new(:name => false_sym, :args => [], :ref => nil, :type => nil)
+        false_case = Case.new(:pattern => false_pat, :exp => x[:else])
+        MatchExp.new(:exp => x[:cond], :cases => [true_case, false_case])
       end
     end
 
     parser :builtin_operation do
-      x = match_with_group_case_op ^ match_with_single_case_op
+      x = match_with_indent_case_group_op ^ match_with_liner_case_group_op
       seq(
         operator_exp.name(:exp),
         many_fail(many1(ws) > x).name(:builtin_ops)
@@ -43,9 +49,9 @@ module Emfrp
       end
     end
 
-    parser :match_with_group_case_op do
+    parser :match_with_indent_case_group_op do
       seq(
-        key("match:").name(:tag),
+        str("of:"),
         many(ws),
         case_group.err("match-exp", "valid case statement").name(:cases)
       ).map do |x|
@@ -53,105 +59,128 @@ module Emfrp
       end
     end
 
-    parser :match_with_single_case_op do
+    parser :match_with_liner_case_group_op do
       seq(
-        key("match").name(:tag),
+        str("of"),
         many1(ws),
-        pattern.err("match-exp", "invalid single-case").name(:pattern),
-        many1(ws),
-        str("to"),
-        many1(ws),
-        exp.err("match-exp", "invalid exp").name(:exp)
+        many1_fail(
+          seq(
+            pattern.name(:pattern).name(:pattern),
+            many1(ws),
+            str("->").err("lienr-match-exp", "->"),
+            many1(ws),
+            exp.err("liner-match-exp", "invalid exp").name(:exp)
+          ).map{|x| Case.new(x.to_h)},
+          comma_separator
+        ).name(:cases)
       ).map do |x|
-        c = Case.new(:tag => x[:tag], :pattern => x[:pattern], :exp => x[:exp])
-        proc{|e| MatchExp.new(:tag => x[:tag], :cases => [c], :exp => e)}
+        proc{|e| MatchExp.new(x.to_h, :exp => e)}
       end
     end
 
     parser :case_group do
-      c = seq(
-        key("case").name(:tag),
-        many1(ws),
-        pattern.err("case-statement", "invalid pattern of case").name(:pattern),
-        many1(ws),
-        str("to").err("caase-statement", "'to'"),
+      cs = seq(
+        many1_fail(pattern, or_separator).name(:patterns),
+        many1(ws).err("case-exp", "space"),
+        str("->").err("case-exp", "'to'"),
         many1(ws),
         exp.err("match-exp", "invalid exp").name(:exp)
-      ).map{|x| Case.new(x.to_h)}
-      many1_fail(c, many1(ws)) < many1(ws) < str(":endcase")
+      ).map do |x|
+        x[:patterns].map{|pat| Case.new(:pattern => pat, :exp => x[:exp].deep_copy)}
+      end
+      many1_fail(cs, many1(ws)).map(&:flatten) < many1(ws) < str(":endcase")
     end
 
     parser :pattern do
-      dont_care_pattern ^ name_pattern ^ recursive_pattern ^ no_arg_pattern ^ tuple_pattern ^ int_pattern
+      pat = dont_care_pattern ^ name_pattern ^ recursive_pattern ^ no_arg_pattern ^ tuple_pattern ^ integral_pattern
+      seq(
+        pat.name(:pattern),
+        opt_fail(
+          many(ws) > str(":") > many(ws) >
+          type.err("param-def", "type")
+        ).to_nil.name(:type)
+      ).map do |x|
+        x[:pattern][:type] = x[:type]
+        x[:pattern]
+      end
     end
 
     parser :dont_care_pattern do
-      char("_").map do |c|
-        AnyPattern.new(:tag => c.tag, :ref => nil)
+      symbol("_").map do |c|
+        AnyPattern.new(:ref => nil, :keyword => c)
       end
     end
 
     parser :name_pattern do
       ident_begin_lower.map do |n|
-        AnyPattern.new(:tag => n[:tag], :ref => n)
+        AnyPattern.new(:ref => n)
       end
     end
 
     parser :recursive_pattern do
       seq(
-        tvalue_symbol.name(:sym),
+        tvalue_symbol.name(:name),
         many(ws),
         str("("),
         many(ws),
-        many1_fail(pattern, comma_separator).err("pattern", "invalide pattern").name(:args),
+        many1_fail(pattern, comma_separator).name(:args),
         many(ws),
-        str(")"),
-        opt_fail(many(ws) > str("as") > many1(ws) > var_name.err("pattern", "invalid name")).map{|x| x[0]}.name(:ref)
-      ).map{|x| ValuePattern.new(x.to_h, :tag => x[0][:tag])}
+        symbol(")").name(:keyword),
+        opt_fail(
+          many(ws) > str("as") > many1(ws) > var_name.err("pattern", "invalid name")
+        ).to_nil.name(:ref)
+      ).map{|x| ValuePattern.new(x.to_h)}
     end
 
     parser :no_arg_pattern do
       seq(
-        tvalue_symbol.name(:sym),
-        opt_fail(many1(ws) > str("as") > var_name.err("pattern", "invalid name")).map{|x| x[0]}.name(:ref)
-      ).map{|x| ValuePattern.new(x.to_h, :args => [], :tag => x[0][:tag])}
+        tvalue_symbol.name(:name),
+        opt_fail(
+          many1(ws) > str("as") > var_name.err("pattern", "invalid name")
+        ).to_nil.name(:ref)
+      ).map{|x| ValuePattern.new(x.to_h, :args => [])}
     end
 
     parser :tuple_pattern do
       seq(
-        key("(").name(:tag),
+        symbol("(").name(:keyword1),
         many(ws),
-        pattern.err("tuple-pattern", "invalid child pattern").name(:arg_head),
+        pattern.name(:arg_head),
         many(ws),
-        str(",").err("tuple-pattern", "invalid child pattern"),
+        str(","),
         many(ws),
-        many1_fail(pattern, comma_separator).err("tuple-pattern", "invalid child pattern").name(:arg_tail),
+        many1_fail(pattern, comma_separator).name(:arg_tail),
         many(ws),
-        str(")"),
+        symbol(")").name(:keyword2),
         opt_fail(
           many(ws) > str("as") > many1(ws) > var_name.err("tuple-pattern", "invalid name")
-        ).map{|x| x[0]}.name(:ref)
+        ).to_nil.name(:ref)
       ).map do |x|
         args = [x[:arg_head]] + x[:arg_tail]
-        TuplePattern.new(:tag => x[:tag], :args => args, :ref => x[:ref])
+        ValuePattern.new(
+          :name => SSymbol.new(:desc => "Tuple" + args.size.to_s),
+          :args => args,
+          :ref => x[:ref],
+          :keyword1 => x[:keyword1],
+          :keyword2 => x[:keyword2]
+        )
       end
     end
 
-    parser :int_pattern do
-      int_literal.map{|n| IntPattern.new(:val => n)}
+    parser :integral_pattern do
+      integral_literal.map{|n| IntegralPattern.new(:val => n, :ref => nil)}
     end
 
     # Operator Expression
     # --------------------
 
     parser :operator_exp do
-      operator_app = operator ^ (char("`") > func_name < char("`"))
-      opexp = operator_app.map do |op|
+      opexp = operator_general.map do |op|
         proc do |l, r|
           if l.is_a?(OperatorSeq)
-            OperatorSeq.new(:seq => l[:seq] + [op, r], :tag => l[:tag])
+            OperatorSeq.new(:seq => l[:seq] + [op, r])
           else
-            OperatorSeq.new(:seq => [l, op, r], :tag => l[:tag])
+            OperatorSeq.new(:seq => [l, op, r])
           end
         end
       end
@@ -171,122 +200,123 @@ module Emfrp
 
     parser :method_call do
       seq(
-        key(".").name(:tag),
+        symbol(".").name(:keyword1),
         many(ws),
-        ident_begin_lower.err("method_call", "invalid method name").name(:method_name),
-        opt_fail(many(ws) > str("(") > many(ws) > many_fail(exp, comma_separator) < many(ws) < str(")") < many(ws))
-          .map{|x| x.flatten}.err("method_call", "invalid form of argument").name(:args)
+        ident_begin_lower.err("method_call", "invalid method name").name(:name),
+        opt_fail(
+          seq(
+            many(ws_without_newline),
+            symbol("(").name(:keyword2),
+            many(ws),
+            many_fail(exp, comma_separator).name(:args),
+            many(ws),
+            symbol(")").name(:keyword3)
+          )
+        ).to_nil.name(:args)
       ).map do |x|
-        proc{|receiver| MethodCall.new(x.to_h, :receiver => receiver)}
+        proc do |receiver|
+          if x[:args]
+            FuncCall.new(
+              :name => x[:name],
+              :keywords => [x[:keyword1], x[:args][:keyword2], x[:args][:keyword3]],
+              :args => [receiver] + x[:args][:args]
+            )
+          else
+            FuncCall.new(
+              :name => x[:name],
+              :keyword => x[:keyword1],
+              :args => [receiver]
+            )
+          end
+        end
       end
     end
 
     parser :atom do
-      literal_exp ^ single_op ^ func_call ^ block_exp ^ array_cons ^ gf_cons ^ value_cons ^ skip ^ var_ref
+      literal_exp ^ single_op ^ func_call ^ block_exp ^ value_cons ^ skip ^ var_ref
     end
 
     parser :single_op do
       seq(operator, many(ws), atom).map do |x|
-        UnaryOperatorExp.new(:tag => x[0][:tag], :op => x[0], :exp => x[2])
+        name = x[0].update(:desc => "@" + x[0][:desc])
+        FuncCall.new(:name => x[0], :args => [x[2]])
       end
     end
 
     parser :func_call do
       seq(
-        func_name.name(:func_name),
-        many(ws) > str("(") > many(ws),
+        func_name.name(:name),
+        many(ws_without_newline),
+        symbol("(").name(:keyword1),
+        many(ws),
         many1_fail(exp, comma_separator).name(:args),
-        many(ws) > str(")")
+        many(ws),
+        symbol(")").name(:keyword2)
       ).map do |x|
-        FuncCall.new(x.to_h, :tag => x[0][:tag])
+        FuncCall.new(x.to_h)
       end
     end
 
     parser :block_exp do
       seq(
-        key("{").name(:tag),
+        symbol("{").name(:keyword1),
         many(ws),
         many_fail(many(ws) > assign).name(:assigns),
         many(ws),
-        str("=>").err("block-exp", "'=>'"),
-        many(ws),
         exp.err("block-exp", "valid return-exp").name(:exp),
         many(ws),
-        str("}"),
+        symbol("}").name(:keyword2)
       ).map do |x|
-        BlockExp.new(x.to_h)
+        x[:assigns].reverse.inject(x[:exp]) do |acc, a|
+          c = Case.new(:pattern => a[:pattern], :exp => acc)
+          MatchExp.new(:cases => [c], :exp => a[:exp])
+        end
       end
     end
 
-    parser :assign do
+    parser :assign do # -> Hash
       seq(
-        var_name.name(:var_name),
+        pattern.name(:pattern),
         many(ws),
         str("="),
         many(ws),
         exp.err("assign", "invalid assign statement").name(:exp)
       ).map do |x|
-        Assign.new(x.to_h, :tag => x[0][:tag])
+        x.to_h
       end
-    end
-
-    parser :parenth_exp do
-      str("(") > many(ws) > exp < many(ws) < str(")")
     end
 
     parser :value_cons do # -> ValueConst
       seq(
-        tvalue_symbol.name(:tvalue_name),
-        opt_fail(many(ws) > str("(") > many(ws) > many_fail(exp, comma_separator) < many(ws) < str(")") < many(ws))
-          .map{|x| x.flatten}.err("value-construction", "invalid form of argument").name(:args)
+        tvalue_symbol.name(:name),
+        opt_fail(
+          seq(
+            many(ws_without_newline),
+            str("("),
+            many(ws),
+            many_fail(exp, comma_separator).name(:args),
+            many(ws),
+            symbol(")").name(:keyword)
+          ).name(:args)
+        ).to_nil.err("value-construction", "invalid form of argument").name(:args)
       ).map do |x|
-        ValueConst.new(x.to_h, :tag => x[0][:tag])
-      end
-    end
-
-    parser :array_cons do # -> ArrayConst
-      seq(
-        key("Array").name(:tag),
-        str("<").err("array-constructor", "'<array-size>'"),
-        (type_var | positive_integer).err("type", "type-size").name(:size),
-        str(">"),
-        many(ws),
-        str("("),
-        many(ws),
-        exp.err("array-constructor", "initialize-expression").name(:exp),
-        many(ws),
-        str(")")
-      ).map do |x|
-        ArrayConst.new(x.to_h)
-      end
-    end
-
-    parser :gf_cons do # -> ArrayConst
-      seq(
-        key("GF").name(:tag),
-        str("<").err("gf-constructor", "'<array-size>'"),
-        (type_var | positive_integer).err("type", "type-size").name(:size),
-        str(">"),
-        many(ws),
-        str("("),
-        many(ws),
-        exp.err("gf-constructor", "initialize-int-expression").name(:exp),
-        many(ws),
-        str(")")
-      ).map do |x|
-        GFConst.new(x.to_h)
+        if x[:args]
+          ValueConst.new(:name => x[:name], :args => x[:args][:args], :keyword => x[:args][:keyword])
+        else
+          ValueConst.new(:name => x[:name], :args => [])
+        end
       end
     end
 
     parser :skip do
-      str("skip").map do |x|
-        SkipExp.new(:tag => x[0].tag)
+      symbol("skip").map do |x|
+        SkipExp.new(:keyword => x)
       end
     end
 
     parser :var_ref do
       var_name_allow_last.map do |s|
-        VarRef.new(:tag => s[:tag], :name => s)
+        VarRef.new(:name => s)
       end
     end
 
@@ -294,74 +324,63 @@ module Emfrp
     # --------------------
 
     parser :literal_exp do
-      string_literal ^ char_literal ^ parenth_or_tuple_literal ^ array_literal ^ float_literal ^ int_literal ^ wrap_literal
-    end
-
-    parser :string_literal do
-      seq(doublequote, many((backslash > (doublequote | backslash)) | non_doublequote) < doublequote).map do |cs|
-        LiteralString.new(:tag => cs[0].tag, :entity => cs[1].map{|c| c.item}.join)
-      end
+      char_literal ^ parenth_or_tuple_literal ^ floating_literal ^ integral_literal
     end
 
     parser :char_literal do
-      seq(singlequote, ((backslash > item) | item) < singlequote).map do |c|
-        LiteralChar.new(:tag => c[0].tag, :entity => c[1].item.ord.to_s)
+      seq(
+        symbol("'").name(:keyword1),
+        ((backslash > item) | item).map{|i| i.item}.name(:entity),
+        symbol("'").name(:keyword2),
+      ).map do |x|
+        LiteralChar.new(x.to_h)
       end
     end
 
     parser :parenth_or_tuple_literal do
       seq(
-        key("(").name(:tag),
+        symbol("(").name(:keyword1),
         many(ws),
-        many1_fail(exp, comma_separator).name(:exps),
-        many(ws) < str(")")
+        many1_fail(exp, comma_separator).name(:entity),
+        many(ws),
+        symbol(")").name(:keyword2)
       ).map do |x|
-        if x[:exps].size == 1
-          x[:exps][0]
+        if x[:entity].size == 1
+          ParenthExp.new(
+            :exp => x[:entity].first,
+            :keyword1 => x[:keyword1],
+            :keyword2 => x[:keyword2]
+          )
         else
-          LiteralTuple.new(:tag => x[:tag], :entity => x[:exps])
+          ValueConst.new(
+            :name => SSymbol.new(:desc => "Tuple" + x[:entity].size.to_s),
+            :args => x[:entity],
+            :parent_begin => x[:keyword1],
+            :parent_end => x[:keyword2]
+          )
         end
       end
     end
 
-    parser :array_literal do
-      seq(
-        key("{").name(:tag),
-        many(ws),
-        many1_fail(exp, comma_separator).name(:exps),
-        many(ws) < str("}")
-      ).map do |x|
-        LiteralArray.new(:tag => x[:tag], :entity => x[:exps])
+    parser :integral_literal do
+      (positive_integer | zero_integer).map do |x|
+        LiteralIntegral.new(:entity => x)
       end
     end
 
-    parser :int_literal do
-      neg = seq(char("-"), positive_integer).map{|x| LiteralInt.new(:tag => x[0].tag, :entity => Symbol.new(:tag => x[0].tag, :desc => "-" + x[1][:desc]))}
-      int_literal_unsigned | neg
-    end
-
-    parser :int_literal_unsigned do
-      zero = char("0").map{|x| LiteralInt.new(:tag => x.tag, :entity => Symbol.new(:tag => x.tag, :desc => "0"))}
-      pos = positive_integer.map{|i| LiteralInt.new(:tag => i[:tag], :entity => i) }
-      zero | pos
-    end
-
-    parser :float_literal do
-      pos = seq(many1(digit).name(:a), char("."), many1(digit).name(:b))
-        .map{|x| LiteralFloat.new(:tag => x[:a][0].tag, :entity => Symbol.new(:desc => "#{x[:a]}.#{x[:b]}", :tag => x[:a][0].tag))}
-      neg = seq(char("-"), many1(digit).name(:a), char("."), many1(digit).name(:b))
-        .map{|x| LiteralFloat.new(:tag => x[:a][0].tag, :entity => Symbol.new(:desc => "-#{x[:a]}.#{x[:b]}", :tag => x[:a][0].tag))}
-      pos | neg
-    end
-
-    parser :wrap_literal do
-      wint = seq(str("Int("), int_literal < str(")")).map{|i| LiteralInt.new(i[1], :tag => i[0][0].tag)}
-      wuint = seq(str("UInt("), int_literal_unsigned < str(")")).map{|i| LiteralUInt.new(i[1], :tag => i[0][0].tag)}
-      wchar = seq(str("Char("), int_literal < str(")")).map{|i| LiteralChar.new(i[1], :tag => i[0][0].tag)}
-      wuchar = seq(str("UChar("), int_literal_unsigned < str(")")).map{|i| LiteralUChar.new(i[1], :tag => i[0][0].tag)}
-      wfloat = seq(str("Float("), float_literal < str(")")).map{|i| LiteralFloat.new(i[1], :tag => i[0][0].tag)}
-      wdouble = seq(str("Double("), float_literal < str(")")).map{|i| LiteralDouble.new(i[1], :tag => i[0][0].tag)}
-      wint | wuint | wchar | wuchar | wfloat | wdouble
+    parser :floating_literal do
+      seq(
+        integral_literal.name(:prefix),
+        char("."),
+        many1(digit).name(:suffix)
+      ).map do |x|
+        sym = SSymbol.new(:desc => x[:prefix][:entity][:desc] + "." + x[:suffix].map(&:item).join)
+        LiteralFloating.new(
+          :entity => sym,
+          :start_pos => x[:prefix][:entity][:start_pos],
+          :end_pos => x[:suffix][-1].tag
+        )
+      end
     end
   end
 end

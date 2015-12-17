@@ -1,0 +1,19 @@
+# testing no-inputs module
+module WithoutInputs
+out
+  x : Int
+use Std
+
+#@ :assert-node x 0 => 1
+#@ :assert-node x 1 => 2
+node init[0] x = x@last + 1
+
+# testing no-dependings node
+#@ :assert-node const0 => 0
+node const0 = 0
+
+#@ :assert-module
+#-   => 1
+#@ : => 2
+#@ : => 3
+#@ : => 4

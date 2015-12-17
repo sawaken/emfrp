@@ -1,0 +1,11 @@
+#include "LCDPositioner.h"
+
+void Input(int* up, int* down, int* left, int* right, int* pulse10ms) {
+  /* Your code goes here... */
+}
+void Output(int* x, int* y) {
+  /* Your code goes here... */
+}
+int main() {
+  ActivateLCDPositioner();
+}
