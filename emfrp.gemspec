@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.version       = Emfrp::VERSION
   spec.authors       = ["Kensuke Sawada"]
   spec.email         = ["sasasawada@gmail.com"]
-  spec.summary       = %q{A compier of the Emfrp, a functional language for small embeded systems.}
+  spec.summary       = %q{A compier of Emfrp, a FRP language for small embeded systems.}
   spec.description   = %q{Pure Functional Programming with your microcomputer.}
   spec.homepage      = ""
   spec.license       = "The BSD 3-Clause License"
