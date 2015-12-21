@@ -92,13 +92,13 @@ module Emfrp
     end
 
     #-> true-like(abnormal-term) / false-like(normal-term)
-    def exec_embeded_commands(only_on_main_path=false) #
+    def exec_embedded_commands(only_on_main_path=false) #
       @top[:commands].any? do |com|
         if !only_on_main_path || com[:file_name] == @file_loader.loaded_full_path(@main_path)
           unless process_repl_line(com[:command_str])
             nil
           else
-            puts "Embeded command on #{com[:file_name]}:#{com[:line_number]}\n"
+            puts "Embedded command on #{com[:file_name]}:#{com[:line_number]}\n"
             true
           end
         else

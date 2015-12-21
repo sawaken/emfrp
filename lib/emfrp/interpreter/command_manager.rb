@@ -159,9 +159,9 @@ module Emfrp
             end
           end
 
-          desc "Executing all commands embeded on source-files."
-          command "exec-embeded-commands" do
-            exec_embeded_commands()
+          desc "Executing all commands embedded on source-files."
+          command "exec-embedded-commands" do
+            exec_embedded_commands()
           end
 
           desc "Define documentation about function. (in preparation)"

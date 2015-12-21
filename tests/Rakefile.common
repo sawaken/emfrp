@@ -6,7 +6,7 @@ TARGETS = Dir.glob("./*.mfrp").map{|x| x =~ /^\.\/(.*).mfrp$/; $1}
 def exec_test(file_name)
   puts "TESTING #{file_name}".colorize(:light_blue)
   inter = Emfrp::Interpreter.new(Emfrp::IncludeDirs, STDOUT, file_name)
-  unless inter.exec_embeded_commands(true)
+  unless inter.exec_embedded_commands(true)
     puts " => ok".colorize(:green)
   else
     puts " => fail".colorize(:red)
