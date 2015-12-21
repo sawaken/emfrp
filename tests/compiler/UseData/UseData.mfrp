@@ -1,0 +1,8 @@
+module UseData out x use Std
+
+
+data one = 1
+data two = one + 1
+data three = two + 1
+
+node x = three

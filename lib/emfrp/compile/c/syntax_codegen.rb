@@ -35,7 +35,7 @@ module Emfrp
       self[:dict][:used_pfuncs].each do |v|
         v.get.codegen(ct)
       end
-      self[:dict][:sorted_datas].each do |v|
+      self[:dict][:sorted_datas].reverse.each do |v|
         v.get.codegen(ct)
       end
       memory_gen(ct, ar)
@@ -87,7 +87,7 @@ module Emfrp
             "#{pn.node_var_name(ct)}[#{x[:last] ? "last_side" : "current_side"}]"
           end
           output_arg = "&#{node.node_var_name(ct)}[current_side]"
-          stmts << "#{node.node_func_name(ct)}(#{[args, *output_arg].join(", ")});"
+          stmts << "#{node.node_func_name(ct)}(#{[*args, output_arg].join(", ")});"
           t = ct.tdef(node)
           if t.is_a?(TypeDef) && !t.enum?(ct)
             mark_val = "Counter + #{ar.life_point(node)}"
@@ -308,8 +308,8 @@ module Emfrp
   class DataDef
     def codegen(ct)
       t = ct.tref(self)
-      ct.define_global_var(t, var_name(ct))
-      ct.define_init_stmt(var_name(ct), "#{init_func_name(ct)}()")
+      ct.define_global_var(t, var_name(ct, self[:name][:desc]))
+      ct.define_init_stmt("#{var_name(ct, self[:name][:desc])} = #{init_func_name(ct)}();")
       ct.define_func(t, init_func_name(ct), []) do |x|
         x << "return #{self[:exp].codegen(ct, x)};"
       end

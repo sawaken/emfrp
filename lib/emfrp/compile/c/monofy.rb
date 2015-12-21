@@ -75,9 +75,9 @@ module Emfrp
         @update = false
         @datas.each do |d|
           key = Link.new(d)
-          unless @top[:dict][:used_datas].find{|x| x == key}
+          unless @top[:dict][:sorted_datas].find{|x| x == key}
             monofy_exp(d[:exp])
-            @top[:dict][:used_datas] << key
+            @top[:dict][:sorted_datas] << key
           end
         end
         @ifuncs.each do |ifunc|
