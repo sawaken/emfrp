@@ -6,6 +6,7 @@ require 'emfrp/parser/expression'
 require 'emfrp/parser/misc'
 require 'emfrp/parser/operator'
 require 'emfrp/parser/parsing_error'
+require 'emfrp/parser/newnode_convert'
 
 module Emfrp
   class Parser < ParserCombinator::StringParser
@@ -22,10 +23,14 @@ module Emfrp
       when Fail
         raise ParsingError.new(src_str, file_name, res.status)
       when Ok
+        newnode_tops = res.parsed[:newnodes].map do |newnode|
+          NewNodeConvert.parse_module(res.parsed[:module_name][:desc], newnode, file_loader)
+        end
+        res.parsed[:newnodes] = []
         tops = res.parsed[:uses].map do |use_path|
           parse_input(use_path.map{|x| x[:desc]}, file_loader, material_file)
         end
-        return Top.new(*tops, res.parsed)
+        return Top.new(*tops, res.parsed, *newnode_tops)
       else
         raise "unexpected return of parser (bug)"
       end

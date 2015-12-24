@@ -1,0 +1,11 @@
+module UseSubModule
+in x : Int
+out a1, b1, a2, b2
+use Std
+
+newnode a1, b1 = SubModule(x, 2)
+newnode a2, b2 = SubModule(x + 1, 3)
+
+#@ :assert-module
+#-   0 => 0, 2, 3, 3
+#@ : 1 => 2, 4, 6, 6

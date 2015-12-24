@@ -1,0 +1,5 @@
+module SubModule2
+in x : Int
+out y
+
+node y = x

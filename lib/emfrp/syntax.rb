@@ -110,6 +110,7 @@ module Emfrp
       :itypes,
       :ifuncs,
       :commands,
+      :newnodes,
     ]
 
     def initialize(*tops)
@@ -152,6 +153,7 @@ module Emfrp
   Types = [
     :InputDef, :OutputDef, :DataDef, :FuncDef, :NodeDef, :TypeDef, :InfixDef,
     :PrimTypeDef, :PrimFuncDef, :CommandDef,
+    :NewNodeDef,
 
     :ParamDef, :Type, :TypeVar, :TValue, :TValueParam, :NodeConst, :ForeignExp,
 

@@ -265,15 +265,15 @@ module Emfrp
     end
 
     def init_func_name(ct)
-      "init_#{self[:name][:desc]}"
+      "init_#{ct.escape_name(self[:name][:desc])}"
     end
 
     def node_func_name(ct)
-      "node_#{self[:name][:desc]}"
+      "node_#{ct.escape_name(self[:name][:desc])}"
     end
 
     def node_var_name(ct)
-      "node_memory_#{self[:name][:desc]}"
+      "node_memory_#{ct.escape_name(self[:name][:desc])}"
     end
 
     def var_suffix(ct)

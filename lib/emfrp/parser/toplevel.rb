@@ -7,7 +7,18 @@ module Emfrp
     # --------------------
 
     parser :module_top_def do
-      (data_def ^ func_def ^ node_def ^ type_def ^ infix_def ^ primtype_def ^ primfunc_def ^ command_def).map do |x|
+      defs = [
+        data_def,
+        func_def,
+        node_def,
+        type_def,
+        infix_def,
+        primtype_def,
+        primfunc_def,
+        command_def,
+        newnode_def,
+      ]
+      defs.inject(&:^).map do |x|
         [x].flatten
       end
     end
@@ -65,6 +76,7 @@ module Emfrp
           when PrimTypeDef then :ptypes
           when PrimFuncDef then :pfuncs
           when CommandDef then :commands
+          when NewNodeDef then :newnodes
           end
           t[k] << d
         end
@@ -206,7 +218,7 @@ module Emfrp
           whole_name = x[:pattern][:ref]
         else
           whole_name = SSymbol.new(
-            :desc => "tmpNode" + x[:pattern].object_id.to_s,
+            :desc => "anonymous" + x[:pattern].object_id.to_s,
             :keyword => x[:pattern].deep_copy
           )
         end
@@ -330,6 +342,26 @@ module Emfrp
           :file_name =>  x[:keyword1][:start_pos][:document_name],
           :command_str => lines.map{|line| line.map(&:item).join}.join(" ")
         )
+      end
+    end
+
+    parser :newnode_def do
+      seq(
+        symbol("newnode").name(:keyword1),
+        many1(ws),
+        many1_fail(ident_begin_lower, comma_separator).name(:names),
+        many(ws),
+        char("="),
+        many(ws),
+        load_path.name(:module_path),
+        many(ws),
+        char("("),
+        many(ws),
+        many_fail(exp, comma_separator).name(:args),
+        many(ws),
+        symbol(")").name(:keyword2)
+      ).map do |x|
+        NewNodeDef.new(x.to_h)
       end
     end
 

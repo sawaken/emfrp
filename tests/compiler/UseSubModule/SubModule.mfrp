@@ -1,0 +1,8 @@
+module SubModule
+in i1 : Int, i2 : Int
+out x, y
+use Std
+
+newnode a = SubModule2(i1)
+node x = a * i2
+node init[0] y = y@last + i2

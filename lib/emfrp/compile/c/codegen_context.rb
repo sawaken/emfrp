@@ -19,7 +19,10 @@ module Emfrp
       "^" => "_caret_",
       "|" => "_vertial_",
       "-" => "_minus_",
-      "~" => "_tilde_"
+      "~" => "_tilde_",
+      "(" => "_cpbegin_",
+      ")" => "_cpend_",
+      "," => "_comma_"
     }
 
     def initialize(top)
