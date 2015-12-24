@@ -33,9 +33,9 @@ module Emfrp
         node[:params].each do |n|
           ch_name = n[:name][:desc]
           if n[:last]
-            edge_stmts << "#{ch_name} -> #{name} [style = dashed];"
+            edge_stmts << "#{escape_name(ch_name)} -> #{escape_name(name)} [style = dashed];"
           else
-            edge_stmts << "#{ch_name} -> #{name};"
+            edge_stmts << "#{escape_name(ch_name)} -> #{escape_name(name)};"
           end
           ch_node = top[:dict][:node_space][ch_name].get
           traverse(top, ch_node, node_stmts, edge_stmts, visited)
@@ -43,7 +43,11 @@ module Emfrp
       when InputDef
         node_attrs << "shape = \"invhouse\""
       end
-      node_stmts << "#{name} [#{node_attrs.join(", ")}];"
+      node_stmts << "#{escape_name(name)} [#{node_attrs.join(", ")}];"
+    end
+
+    def escape_name(name)
+      CodegenContext.new(nil).escape_name(name)
     end
   end
 end
