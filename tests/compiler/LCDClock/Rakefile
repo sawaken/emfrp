@@ -1,0 +1,2 @@
+NAME = "LCDClock"
+load File.expand_path('../../Rakefile.common', __FILE__)

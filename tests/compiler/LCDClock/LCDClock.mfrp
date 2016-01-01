@@ -1,0 +1,84 @@
+module LCDClock
+in
+  btnMode(False) : Bool,
+  btnNext(False) : Bool,
+  btnRotate(False) : Bool,
+  pulse100ms : Bool
+out
+  hour, min, sec,
+  maskHour, maskMin, maskSec
+use
+  Std
+
+type Mode = Normal | Edit
+type TPos = HPos | MPos | SPos
+type Time = Time(Int, Int, Int)
+
+# Functions
+# --------------------
+
+func nextMode(m) = m of Normal -> Edit, Edit -> Normal
+
+func editable(m) = m of Normal -> False, Edit -> True
+
+func nextPos(p) = p of HPos -> MPos, MPos -> SPos, SPos -> HPos
+
+func positiveEdge(a, b) = !a && b
+
+#@ :assert-equals Time(0,0,0), Time(23,59,59).proceedTime
+func proceedTime(t) = {
+  Time(h, m, s) = t
+  newS = s + 1
+  newM = m + (newS / 60)
+  newH = h + (newM / 60)
+  Time(newH % 24, newM % 60, newS % 60)
+}
+
+func roundingTime(t, dh, dm, ds) = {
+  Time(h, m, s) = t
+  Time((h + dh) % 24, (m + dm) % 60, (s + ds) % 60)
+}
+
+# Nodes
+# --------------------
+
+node init[0] counter =
+  (if pulse100ms then counter@last + 1 else counter@last) % 10
+
+node pulse1s =
+  counter == 0 && counter@last != 0
+
+node init[Time(0, 0, 0)] curTime =
+  if pulse1s then
+    curTime@last.proceedTime.roundingTime(dh, dm, ds)
+  else
+    curTime@last.roundingTime(dh, dm, ds)
+
+node init[Normal] curMode =
+  if btnMode@last `positiveEdge` btnMode then curMode@last.nextMode else curMode@last
+
+node init[HPos] curPos =
+  if btnNext@last `positiveEdge` btnNext then curPos@last.nextPos else curPos@last
+
+node (dh, dm, ds) =
+  if curMode.editable && (btnRotate@last `positiveEdge` btnRotate) then
+    curPos of:
+      HPos -> (1, 0, 0)
+      MPos -> (0, 1, 0)
+      SPos -> (0, 0, 1)
+  else
+    (0, 0, 0)
+
+node flash =
+  counter < 5
+
+node Time(hour, min, sec) = curTime
+
+node (maskHour, maskMin, maskSec) =
+  if curMode.editable && flash then
+    curPos of:
+      HPos -> (False, True, True)
+      MPos -> (True, False, True)
+      SPos -> (True, True, False)
+  else
+    (True, True, True)
