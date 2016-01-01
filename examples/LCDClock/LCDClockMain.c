@@ -4,7 +4,7 @@
 
 C12832_LCD lcd;
 Ticker t;
-DigitalIn right(p16), left(p13), up(p15), down(p12);
+DigitalIn center(p14), up(p15), right(p16);
 int pulse100_flag = 0;
 
 void timer_callback() {
@@ -20,8 +20,8 @@ void display(int n, int mask, char c) {
 }
 
 void Input(int* btnMode, int* btnNext, int* btnRotate, int* pulse100ms) {
-  *btnMode = right.read();
-  *btnNext = left.read();
+  *btnMode = center.read();
+  *btnNext = right.read();
   *btnRotate = up.read();
   *pulse100ms = pulse100_flag;
   pulse100_flag = 0;
