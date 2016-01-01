@@ -287,7 +287,7 @@ module Emfrp
 
   class InputDef
     def init_func_gen(ct)
-      ct.define_func(tref(self), init_func_name(ct), []) do |x|
+      ct.define_func(ct.tref(self), init_func_name(ct), []) do |x|
         x << "return #{self[:init_exp].codegen(ct, x)};"
       end
     end
