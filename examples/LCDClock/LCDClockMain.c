@@ -12,7 +12,7 @@ void timer_callback() {
 }
 
 void display(int n, int mask, char c) {
-  if (!mask) {
+  if (mask) {
     lcd.printf("--%c", c);
   } else {
     lcd.printf("%02d%c", n, c);

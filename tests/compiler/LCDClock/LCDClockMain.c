@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 void display(int n, int mask, char c) {
-  if (!mask) {
+  if (mask) {
     printf("--%c", c);
   } else {
     printf("%02d%c", n, c);
