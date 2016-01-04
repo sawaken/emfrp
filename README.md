@@ -24,5 +24,5 @@ $ emfrp <src-file>
 
 ## Usage
 
-Here is a (temporary) easy introduction:
+See wiki:
 https://github.com/sawaken/emfrp/wiki
