@@ -14,14 +14,17 @@ use
 # --------------------
 
 type Mode = Normal | Edit
-type TPos = HPos | MPos | SPos
+type EditPos = HourPos | MinPos | SecPos
 type Time = Time(Int, Int, Int)
 
 func nextMode(m) = m of Normal -> Edit, Edit -> Normal
 
 func editable(m) = m of Normal -> False, Edit -> True
 
-func nextPos(p) = p of HPos -> MPos, MPos -> SPos, SPos -> HPos
+func nextPos(p) = p of:
+  HourPos -> MinPos
+  MinPos -> SecPos
+  SecPos -> HourPos
 
 func positiveEdge(a, b) = !a && b
 
@@ -59,16 +62,16 @@ node init[Normal] curMode : Mode =
   if btnMode@last `positiveEdge` btnMode then curMode@last.nextMode else curMode@last
 
 # time-varying value representing current editing-cursor-position
-node init[HPos] curPos : TPos =
+node init[HourPos] curPos : EditPos =
   if btnNext@last `positiveEdge` btnNext then curPos@last.nextPos else curPos@last
 
 # time-varying value representing diffs to add to current time.
 node (dh, dm, ds) : (Int, Int, Int) =
   if curMode.editable && (btnRotate@last `positiveEdge` btnRotate) then
     curPos of:
-      HPos -> (1, 0, 0)
-      MPos -> (0, 1, 0)
-      SPos -> (0, 0, 1)
+      HourPos -> (1, 0, 0)
+      MinPos -> (0, 1, 0)
+      SecPos -> (0, 0, 1)
   else
     (0, 0, 0)
 
@@ -83,8 +86,8 @@ node init[Time(0, 0, 0)] Time(hour, min, sec) as curTime =
 node (maskHour, maskMin, maskSec) =
   if curMode.editable && flash then
     curPos of:
-      HPos -> (True, False, False)
-      MPos -> (False, True, False)
-      SPos -> (False, False, True)
+      HourPos -> (True, False, False)
+      MinPos -> (False, True, False)
+      SecPos -> (False, False, True)
   else
     (False, False, False)
