@@ -1,8 +1,8 @@
 module UseData out x use Std
 
 
-data one = 1
-data two = one + 1
-data three = two + 1
+data one = 1         # one 
+data two = one + 1   # two
+data three = two + 1 # three
 
 node x = three

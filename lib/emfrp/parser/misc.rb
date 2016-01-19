@@ -68,7 +68,7 @@ module Emfrp
     end
 
     parser :end_of_def do # -> ()
-      many(tabspace) > newline > many(ws)
+      many(ws_without_newline) > newline > many(ws)
     end
 
     parser :ident_begin_lower do # -> SSymbol
