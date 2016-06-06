@@ -218,7 +218,7 @@ module Emfrp
           whole_name = x[:pattern][:ref]
         else
           whole_name = SSymbol.new(
-            :desc => "anonymous" + x[:pattern].object_id.to_s,
+            :desc => "anonymous" + x[:pattern].object_id.abs.to_s,
             :keyword => x[:pattern].deep_copy
           )
         end
