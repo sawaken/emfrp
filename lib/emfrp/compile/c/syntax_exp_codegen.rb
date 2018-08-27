@@ -80,6 +80,7 @@ module Emfrp
     end
 
     def pattern_to_cond_exps(ct, receiver, stmts, case_def, pattern)
+      receiver = ct.escape_name(receiver)
       if pattern[:ref]
         vname = case_def.var_name(ct, pattern[:ref][:desc])
         stmts << "#{ct.tref(pattern)} #{vname} = #{receiver};"
