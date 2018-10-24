@@ -55,7 +55,7 @@ module Emfrp
       stmts << "#{ct.tref(self)} #{vname};"
       left = self[:exp]
       if left.is_a?(VarRef)
-        left_vname = left[:name][:desc]
+        left_vname = ct.escape_name(left[:name][:desc])
       else
         left_vname = "_tmp%03d" % ct.uniq_id_gen
         stmts.unshift "#{ct.tref(left)} #{left_vname};"
