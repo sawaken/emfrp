@@ -45,7 +45,7 @@ module Emfrp
       main_output_file = filename + "Main" + ".c"
       File.open(c_output_file, 'w') do |c_file|
         File.open(h_output_file, 'w') do |h_file|
-          main_output_file += ".gen" if File.exist?(main_output_file)
+          main_output_file += ".gen" # if File.exist?(main_output_file)
           File.open(main_output_file, 'w') do |main_file|
             compile(c_file, h_file, main_file, filename)
           end
