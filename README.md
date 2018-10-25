@@ -1,6 +1,6 @@
 # Emfrp
 
-Pure Functional Programming Language for Small-Scale Embedded Systems
+Pure Functional Reactive Programming Language for Small-Scale Embedded Systems
 
 
 ## Installation
@@ -20,7 +20,7 @@ $ cd emfrp
 $ rake install
 ```
 
-Some environments require that you should have an administrator account to install.
+Some environments require that you have an administrator account to install.
 ```sh
 $ sudo rake install
 ```
