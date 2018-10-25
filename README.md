@@ -5,7 +5,7 @@ Pure Functional Programming Language for Small-Scale Embedded Systems
 
 ## Installation
 
-Requitment
+Requirement
 * Ruby2.0 or later (and it's Gem client)
 * Bundler
 
@@ -40,5 +40,5 @@ See wiki for details.
 https://github.com/psg-titech/emfrp/wiki
 
 ## History
-Originally developed by Kensuke Sawada.  
+Originally developed by [Kensuke Sawada](https://github.com/sawaken)   
 http://www.psg.c.titech.ac.jp/posts/2016-03-15-CROW2016.html
