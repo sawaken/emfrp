@@ -2,12 +2,18 @@
 
 Pure Functional Reactive Programming Language for Small-Scale Embedded Systems
 
-
 ## Installation
 
 Requirement
 * Ruby2.0 or later (and it's Gem client)
-* Bundler
+
+### Using RubyGem
+
+```
+$ gem install emfrp
+```
+
+### From Source
 
 Install Bundler if it is not installed.
 ```sh
@@ -33,8 +39,12 @@ $ emfrpi
 
 Compiler
 ```sh
-$ emfrp <src-file>
+$ emfrp [options] <src-file>
 ```
+
+Options
+* `--nomain` does not generate _main_ file
+* `--cpp` generates `.cpp` instead of `.c`
 
 See wiki for details.  
 https://github.com/psg-titech/emfrp/wiki
