@@ -49,8 +49,7 @@ Options
 * `--cpp`  
   generates `.cpp` instead of `.c`
 
-See wiki for details.  
-https://github.com/psg-titech/emfrp/wiki
+See the wiki of this repository for details.
 
 ## Sample Code
 
