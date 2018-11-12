@@ -38,16 +38,21 @@ module Emfrp
       Emfrp::Codegen.codegen(@top, c_output_io, h_output_io, main_output_io, name)
     end
 
-    def compile_default
+    def compile_default(gen_cpp = false, gen_main = true)
       filename = @top[:module_name][:desc]
-      c_output_file = filename + ".c"
+      c_output_file = filename + (gen_cpp ? ".cpp" : ".c")
       h_output_file = filename + ".h"
       main_output_file = filename + "Main" + ".c"
       File.open(c_output_file, 'w') do |c_file|
         File.open(h_output_file, 'w') do |h_file|
           main_output_file += ".gen" if File.exist?(main_output_file)
-          File.open(main_output_file, 'w') do |main_file|
-            compile(c_file, h_file, main_file, filename)
+          if gen_main
+            File.open(main_output_file, 'w') do |main_file|
+              compile(c_file, h_file, main_file, filename)
+            end
+          else
+            require "stringio"
+            compile(c_file, h_file, StringIO.new, filename)
           end
           return nil
         end

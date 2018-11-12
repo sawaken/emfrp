@@ -1,28 +1,61 @@
 # Emfrp
 
-Pure Functional Programming with your microcomputer.
-
-# Requirement
-
-* Ruby2.0 or later (and it's Gem client)
+Pure Functional Reactive Programming Language for Small-Scale Embedded Systems
 
 ## Installation
-You can get executables via RubyGems.
-```sh
+
+Requirement
+* Ruby 2.0 or later (and it's Gem client)
+* C (or C++) compiler for your favorite target platform
+
+### via RubyGems
+
+Just type the following command.
+```
 $ gem install emfrp
 ```
+You are all set. Enjoy!
 
-# Command-line-interpreter (REPL)
+### from Source
+
+Install `Bundler` if it is not installed.
+```sh
+$ gem install bundler
+```
+
+Clone this repository and install from the cloned source as follows.
+```sh
+$ cd emfrp
+$ rake install
+```
+
+***NOTE***
+Some environments require that you need to be an administrator to perform `gem install` or `rake install`.
+
+## Usage
+Command-line-interpreter (REPL)
 ```sh
 $ emfrpi
 ```
 
-# Compiler
+Compiler
 ```sh
-$ emfrp <src-file>
+$ emfrp [options] <src-file>
 ```
 
-## Usage
+Options
+* `--nomain`  
+  does not generate _main_ file
+* `--cpp`  
+  generates `.cpp` instead of `.c`
 
-See wiki:
-https://github.com/sawaken/emfrp/wiki
+See the wiki of this repository for details.
+
+## Sample Code
+
+* [emfrp_samples](https://github.com/psg-titech/emfrp_samples)
+
+
+## History
+Originally developed by [Kensuke Sawada](https://github.com/sawaken)   
+* [Paper](http://www.psg.c.titech.ac.jp/posts/2016-03-15-CROW2016.html)

@@ -1,7 +1,10 @@
 #!/usr/bin/env ruby
 $LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
 
+require 'optparse'
 require 'emfrp'
+
+opts = ARGV.getopts("", "cpp", "nomain")
 
 unless ARGV[0]
   puts "usage: emfrp <emfrp-module-file-path>"
@@ -10,7 +13,7 @@ end
 
 begin
   inter = Emfrp::Interpreter.new(Emfrp::IncludeDirs, STDOUT, ARGV[0])
-  if inter.compile_default()
+  if inter.compile_default(opts["cpp"], !opts["nomain"])
     exit(1)
   end
 rescue Emfrp::Interpreter::InterpreterError
