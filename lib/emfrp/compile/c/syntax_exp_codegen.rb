@@ -94,7 +94,7 @@ module Emfrp
           if type_def.enum?(ct)
             conds << "#{receiver} == #{tvalue_id}"
           else
-            conds << "#{receiver}" + accessor + "tvalue_type == " + tvalue_id.to_s
+            conds << "#{receiver}" + accessor + "tvalue_id == " + tvalue_id.to_s
           end
         end
         new_receiver = "#{receiver}" + accessor + "value." + pattern[:name][:desc]
