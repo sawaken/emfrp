@@ -11,7 +11,7 @@ module Emfrp
         input[:name][:desc] << "##{uniq_key}"
         top[:nodes] << NodeDef.new(
           :name => input[:name],
-          :init_exp => nil,
+          :init_exp => input[:init_exp],
           :params => nil,
           :type => nil,
           :exp => arg_exp,
