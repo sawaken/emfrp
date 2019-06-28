@@ -56,13 +56,13 @@ module Emfrp
           width = lines[ln].chars.take_while{|c| c == "\s"}.size
           ((ln+1)..(len-1)).each do |ln2|
             width2 = lines[ln2].chars.take_while{|c| c == "\s"}.size
-            if lines[ln2].strip == ""
+            if ln2 == len - 1
+              lines[ln2] << " :endcase"
+              break
+            elsif lines[ln2].strip == ""
               next
             elsif width2 <= width
               lines[ln2 - 1] << " :endcase"
-              break
-            elsif ln2 == len - 1
-              lines[ln2] << " :endcase"
               break
             end
           end
