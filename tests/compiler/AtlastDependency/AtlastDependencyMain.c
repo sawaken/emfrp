@@ -7,8 +7,8 @@ int i = 0;
 void Input() {
 }
 
-void Output(int* x) {
-  printf("%d\n", *x);
+void Output(int* delay3A) {
+  printf("%d\n", *delay3A);
   if (++i == 10) {
     exit(0);
   }

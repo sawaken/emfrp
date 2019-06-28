@@ -1,7 +1,7 @@
-module AtlastDependency out x use Std
+module AtlastDependency out delay3A use Std
 
 node init[0] a = a@last + 1
-node init[0] b = a@last
-node init[0] c = b@last
+node init[0] delayA = a@last
+node init[0] delay2A = delayA@last
+node init[0] delay3A = delay2A@last
 
-node x = b + c
