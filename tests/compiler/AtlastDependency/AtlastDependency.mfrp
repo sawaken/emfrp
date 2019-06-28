@@ -1,0 +1,7 @@
+module AtlastDependency out x use Std
+
+node init[0] a = a@last + 1
+node init[0] b = a@last
+node init[0] c = b@last
+
+node x = b + c

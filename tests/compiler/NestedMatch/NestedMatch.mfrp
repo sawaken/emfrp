@@ -1,0 +1,29 @@
+module NestedMatch
+in tag : Int, value : Int
+out x
+use Std
+
+type Tag = T1 | T21 | T22 | T33 | T34
+type InnerA = Inner1(Int) | Inner2(Int,Int)
+type InnerB = Inner3(Int) | Inner4(Int,Int)
+type Outer = Outer1(Int) | Outer2(InnerA) | Outer3(InnerB)
+
+node mid =
+  tag of:
+    0 -> Outer1(value)
+    1 -> Outer2(Inner1(value))
+    2 -> Outer2(Inner2(value,0))
+    3 -> Outer3(Inner3(value))
+    4 -> Outer3(Inner4(value,0))
+    _ -> Outer1(-1)
+
+node x = 
+  mid of:
+    Outer1(a) -> a
+    Outer2(innerA) -> innerA of:
+                        Inner1(a) -> a
+                        Inner2(a, _) -> a
+    Outer3(innerB) -> innerB of:
+                        Inner3(a) -> a
+                        Inner4(a, _) -> a
+

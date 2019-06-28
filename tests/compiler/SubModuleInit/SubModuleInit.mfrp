@@ -1,0 +1,7 @@
+module SubModuleInit
+in x : Int, y : Int
+out delay2X : Int, delay2Y : Int
+use Std
+
+newnode delay2X = Delay2(x)
+newnode delay2Y = Delay2(y)
