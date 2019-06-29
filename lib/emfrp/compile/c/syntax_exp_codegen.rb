@@ -55,7 +55,7 @@ module Emfrp
       stmts << "#{ct.tref(self)} #{vname};"
       left = self[:exp]
       if left.is_a?(VarRef)
-        left_vname = ct.escape_name(left[:name][:desc])
+        left_vname = left[:binder].get.var_name(ct, left[:name][:desc])
       else
         left_vname = "_tmp%03d" % ct.uniq_id_gen
         stmts.unshift "#{ct.tref(left)} #{left_vname};"
@@ -94,7 +94,7 @@ module Emfrp
           if type_def.enum?(ct)
             conds << "#{receiver} == #{tvalue_id}"
           else
-            conds << "#{receiver}" + accessor + "tvalue_type == " + tvalue_id.to_s
+            conds << "#{receiver}" + accessor + "tvalue_id == " + tvalue_id.to_s
           end
         end
         new_receiver = "#{receiver}" + accessor + "value." + pattern[:name][:desc]

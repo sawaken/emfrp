@@ -1,3 +1,5 @@
+require 'set'
+
 module Emfrp
   class Monofy
     IType = Struct.new(:typing, :type_def) do
@@ -32,14 +34,14 @@ module Emfrp
 
     def used_nodes
       used = []
+      visited = Set.new
       f = proc do |n|
         used << n
+        visited << n[:name]
         n[:params].each do |p|
           pn = @top[:dict][:node_space][p[:name][:desc]].get
           if pn.is_a?(NodeDef)
-            if p[:last]
-              used << pn
-            else
+            if !visited.include?(p[:name])
               f.call(pn)
             end
           end

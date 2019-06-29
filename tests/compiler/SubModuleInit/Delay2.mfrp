@@ -1,0 +1,7 @@
+module Delay2
+in input(0) : Int
+out delay2 : Int
+use Std
+
+node init[0] mid = input@last
+node delay2 = mid@last
