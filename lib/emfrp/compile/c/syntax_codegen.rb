@@ -159,7 +159,7 @@ module Emfrp
       return if enum?(ct)
       params = [[ref_name(ct), "x"], ["int", "mark"]]
       ct.define_func("void", marker_func_name(ct), params) do |x|
-        x << "x->mark = mark;" unless self[:static]
+        x << "if (mark > x->mark) { x->mark = mark; }" unless self[:static]
         accessor = self[:static] ? "." : "->"
         cases = []
         self[:tvalues].each_with_index do |tvalue, i|
