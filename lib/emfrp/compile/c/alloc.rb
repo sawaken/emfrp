@@ -43,7 +43,7 @@ module Emfrp
           i >= ref_pos_last(x)
         end
         crefs.reject! do |x|
-          i >= ref_pos_current(x)
+          ref_pos_last(x) == -1 and i >= ref_pos_current(x)
         end
       end
       return max_amount
