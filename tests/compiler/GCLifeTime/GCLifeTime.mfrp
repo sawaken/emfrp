@@ -1,0 +1,13 @@
+module GCLifeTime
+in a : Int
+out x
+use Std
+
+type Wrap = Wrap(Int)
+
+node init[Wrap(0)] wrap = Wrap(a)
+node ref = wrap
+node unwrap = ref of Wrap(val) -> val
+node rewrap = Wrap(unwrap)
+
+node x = (wrap@last, rewrap) of (Wrap(p), Wrap(q)) -> p + q
