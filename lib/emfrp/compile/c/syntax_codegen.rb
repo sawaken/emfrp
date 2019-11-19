@@ -146,6 +146,7 @@ module Emfrp
           while_stmts << "if (#{mn} < Counter) { x = #{memory_name(ct)} + #{memory_counter_name(ct)}; break; }"
           s << "#{ref_name(ct)} x;"
           s << ct.make_block("while (1) {", while_stmts, "}")
+          s << "x->mark = 0;"
           s << "x->tvalue_id = #{i};" if self[:tvalues].length > 1
           tvalue[:params].each_with_index do |param, i|
             s << "x->value.#{tvalue.struct_name(ct)}.member#{i} = member#{i};"
