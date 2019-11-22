@@ -72,6 +72,8 @@ module Emfrp
         end
         if i == 0
           stmts << ct.make_block("if (#{cond_exp}) {", then_stmts, "}")
+        elsif i == self[:cases].length - 1
+          stmts << ct.make_block("else {", then_stmts, "}")
         else
           stmts << ct.make_block("else if (#{cond_exp}) {", then_stmts, "}")
         end
