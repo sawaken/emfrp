@@ -147,7 +147,7 @@ module Emfrp
 
     def define_func(type_str, name_str, params, accessor=:static, with_proto=true, &block)
       elements = []
-      proc.call(elements)
+      block.call(elements)
       case accessor
       when :none then deco = ""
       when :static then deco = "static "
@@ -176,9 +176,9 @@ module Emfrp
       @init_stmts << stmt
     end
 
-    def define_struct(kind_str, name_str, var_name_str)
+    def define_struct(kind_str, name_str, var_name_str, &block)
       elements = []
-      proc.call(elements)
+      block.call(elements)
       x = Block.new("#{kind_str} #{name_str}{", elements, "}#{var_name_str};")
       if name_str
         @structs << x
